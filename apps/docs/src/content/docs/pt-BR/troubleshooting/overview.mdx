@@ -1,0 +1,46 @@
+---
+title: Resolução de Problemas
+description: Checklist rápido para problemas comuns do Shadow Whisper.
+---
+
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+## Checklist rápido
+
+Se o Shadow Whisper não está funcionando como esperado, siga este checklist:
+
+### Gravação não inicia
+
+1. **Verifique a permissão do microfone** — clique no ícone da extensão e confirme que o acesso ao microfone está concedido. Pode ser necessário permitir nas configurações do navegador.
+2. **Verifique o atalho de teclado** — o padrão é <kbd>Alt+Space</kbd> (Mac) ou <kbd>Alt+Shift+W</kbd> (Windows/Linux). Outra extensão ou app pode estar usando o mesmo atalho.
+3. **Verifique se está logado** — abra o painel lateral da extensão e confirme que você está conectado.
+4. **Tente outra aba** — algumas páginas restritas (chrome://, configurações do navegador) não permitem que extensões funcionem.
+
+### Texto não é inserido
+
+1. **Clique em um campo de texto primeiro** — o Shadow Whisper insere o texto na posição do cursor. Se nenhum campo de texto estiver focado, ele usa a área de transferência como fallback.
+2. **Verifique permissões da área de transferência** — a extensão precisa de permissão para escrever na área de transferência.
+3. **Tente um campo de texto mais simples** — alguns editores de texto rico (Google Docs, Notion) lidam com input de forma diferente. Tente um campo de texto simples primeiro.
+
+### Transcrição está lenta ou falha
+
+1. **Verifique sua conexão com a internet** — a transcrição requer conexão com nosso serviço na nuvem.
+2. **Verifique o tamanho do áudio** — gravações muito longas podem demorar mais para processar.
+3. **Tente novamente** — problemas de rede transitórios podem causar falhas ocasionais. A extensão tentará novamente automaticamente em alguns casos.
+
+### Idioma errado
+
+O Shadow Whisper detecta o idioma falado automaticamente. Se ele detecta consistentemente o idioma errado:
+
+1. **Fale em um idioma por vez** — misturar idiomas em uma única gravação pode confundir a detecção.
+2. **Verifique suas configurações de idioma** — você pode definir um idioma preferido nas configurações da extensão para sobrescrever a detecção automática.
+
+## Ainda com problemas?
+
+<CardGrid>
+  <LinkCard
+    title="Reportar um Problema"
+    href="/troubleshooting/report-issue"
+    description="Como coletar informações e reportar um bug."
+  />
+</CardGrid>

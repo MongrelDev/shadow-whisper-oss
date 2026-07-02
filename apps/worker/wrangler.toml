@@ -1,0 +1,199 @@
+name = "shadowwhisper-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-18"
+compatibility_flags = ["nodejs_compat"]
+
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+fallthrough = true
+
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
+[[send_email]]
+name = "EMAIL"
+
+[ai]
+binding = "AI"
+
+[[flagship]]
+binding = "FLAGS"
+app_id = "9341c94b-4bb2-4c8e-a0a6-3e210d87f6e4"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shadowwhisper-db"
+database_id = "placeholder-will-be-created"
+migrations_dir = "../../packages/db/migrations"
+
+[[durable_objects.bindings]]
+name = "WhisperAgent"
+class_name = "WhisperAgent"
+
+[[durable_objects.bindings]]
+name = "GUEST_AGENT"
+class_name = "GuestAgent"
+
+[[workflows]]
+name = "teach-analysis"
+class_name = "TeachAnalysisWorkflow"
+binding = "TEACH_ANALYSIS_WORKFLOW"
+
+[[migrations]]
+tag = "v1-initial"
+new_sqlite_classes = [
+  "WhisperAgent",
+  "UserLexiconDO",
+  "UsageLedgerDO",
+  "SkillAgent",
+  "GuestAgent",
+]
+
+[[migrations]]
+tag = "v2-remove-skill-agent"
+deleted_classes = ["SkillAgent"]
+
+[[migrations]]
+tag = "v3-remove-user-lexicon-and-usage-ledger"
+deleted_classes = ["UserLexiconDO", "UsageLedgerDO"]
+
+[[ratelimits]]
+name = "RATE_LIMIT_1_PER_MIN"
+namespace_id = "1001"
+simple = { limit = 1, period = 60 }
+
+[[ratelimits]]
+name = "RATE_LIMIT_5_PER_MIN"
+namespace_id = "1002"
+simple = { limit = 5, period = 60 }
+
+[[ratelimits]]
+name = "RATE_LIMIT_10_PER_MIN"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
+[observability]
+enabled = true
+
+[observability.logs]
+head_sampling_rate = 1
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+
+[vars]
+ENVIRONMENT = "development"
+APP_URL = "http://localhost:3001"
+TRUSTED_ORIGINS = "http://localhost:3001,http://localhost:5173,http://localhost:8787"
+AUTH_EMAIL_FROM_NAME = "ShadowWhisper"
+AUTH_EMAIL_FROM_ADDRESS = "noreply@shadowwhisper.local"
+AUTH_EMAIL_REPLY_TO = "support@shadowwhisper.local"
+STRIPE_PRO_MONTHLY = "price_1TIt3DCe3UJROfVPq5ds8wrE"
+STRIPE_PRO_ANNUAL = "price_1TIt3DCe3UJROfVP9JLhd2EU"
+GOOGLE_CLIENT_ID = "302014322561-vo513tesu5thhsvjap5c8kgc6l7iid95.apps.googleusercontent.com"
+AI_GATEWAY_ID = "shadow-whisper-ai-gateway"
+CF_ACCOUNT_ID = "cb0ab4966c11b70aac3c7090f36fb938"
+GUEST_COOKIE_DOMAIN = "localhost"
+EXTENSION_ID = ""
+
+[secrets]
+required = [
+  "AUTH_SECRET",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "GOOGLE_CLIENT_SECRET",
+  "GUEST_SECRET",
+  "AI_GATEWAY_TOKEN",
+  "GROQ_API_KEY",
+  "POSTHOG_API_KEY",
+]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+APP_URL = "https://preview.shadow-whisper.com"
+TRUSTED_ORIGINS = "https://preview.shadow-whisper.com,https://shadow-whisper.com,https://www.shadow-whisper.com"
+AUTH_EMAIL_FROM_NAME = "ShadowWhisper"
+AUTH_EMAIL_FROM_ADDRESS = "noreply@shadow-whisper.com"
+AUTH_EMAIL_REPLY_TO = "support@shadow-whisper.com"
+STRIPE_PRO_MONTHLY = "price_1TaD23CoTB7LGmEBWz6tIlyk"
+STRIPE_PRO_ANNUAL = "price_1TaD29CoTB7LGmEBci0kSUUt"
+GOOGLE_CLIENT_ID = "483727848230-795gjgk9rchagg6a7flko5b2f03667nc.apps.googleusercontent.com"
+AI_GATEWAY_ID = "shadow-whisper-ai-gateway"
+CF_ACCOUNT_ID = "cb0ab4966c11b70aac3c7090f36fb938"
+GUEST_COOKIE_DOMAIN = ".shadow-whisper.com"
+EXTENSION_ID = ""
+
+[env.production.secrets]
+required = [
+  "AUTH_SECRET",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "GOOGLE_CLIENT_SECRET",
+  "GUEST_SECRET",
+  "AI_GATEWAY_TOKEN",
+  "GROQ_API_KEY",
+  "POSTHOG_API_KEY",
+]
+
+[env.production.observability]
+enabled = true
+
+[env.production.observability.logs]
+invocation_logs = false
+head_sampling_rate = 1
+
+[env.production.observability.traces]
+enabled = true
+head_sampling_rate = 1
+
+[[env.production.flagship]]
+binding = "FLAGS"
+app_id = "9341c94b-4bb2-4c8e-a0a6-3e210d87f6e4"
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "shadowwhisper-db"
+database_id = "3494422c-b517-4c0c-8220-9f999076d659"
+migrations_dir = "../../packages/db/migrations"
+
+[[env.production.routes]]
+pattern = "workers.shadow-whisper.com"
+custom_domain = true
+
+[[env.production.durable_objects.bindings]]
+name = "WhisperAgent"
+class_name = "WhisperAgent"
+
+[[env.production.durable_objects.bindings]]
+name = "GUEST_AGENT"
+class_name = "GuestAgent"
+
+[[env.production.workflows]]
+name = "teach-analysis"
+class_name = "TeachAnalysisWorkflow"
+binding = "TEACH_ANALYSIS_WORKFLOW"
+
+[[env.production.send_email]]
+name = "EMAIL"
+
+[[env.production.ratelimits]]
+name = "RATE_LIMIT_1_PER_MIN"
+namespace_id = "3001"
+simple = { limit = 1, period = 60 }
+
+[[env.production.ratelimits]]
+name = "RATE_LIMIT_5_PER_MIN"
+namespace_id = "3002"
+simple = { limit = 5, period = 60 }
+
+[[env.production.ratelimits]]
+name = "RATE_LIMIT_10_PER_MIN"
+namespace_id = "3003"
+simple = { limit = 10, period = 60 }

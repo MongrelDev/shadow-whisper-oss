@@ -1,0 +1,60 @@
+name: Release Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Extension version to release (e.g. 0.0.2, 0.0.2-preview)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark GitHub release as prerelease"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-extension-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+  HUSKY: 0
+  RELEASE_VERSION: ${{ inputs.version }}
+
+jobs:
+  release:
+    name: Build extension release zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build extension
+        run: pnpm --filter @whisper/extension build
+
+      - name: Package extension zip
+        run: pnpm --filter @whisper/extension zip
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: extension-v${{ inputs.version }}
+          name: Extension v${{ inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          files: apps/extension/.output/*.zip

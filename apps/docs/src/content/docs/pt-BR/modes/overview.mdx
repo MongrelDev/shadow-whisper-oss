@@ -1,0 +1,51 @@
+---
+title: Visão Geral dos Modos
+description: Entenda como os modos do Shadow Whisper transformam sua fala em diferentes formatos de texto.
+---
+
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+## O que são modos?
+
+Modos controlam **como o Shadow Whisper processa sua fala** após a transcrição. Pense neles como assistentes de escrita com diferentes especializações.
+
+Por padrão, o Shadow Whisper faz uma **limpeza inteligente**: transcreve sua fala fielmente, adiciona pontuação, remove palavras de preenchimento e corrige capitalização. Esse é o comportamento base que funciona para a maioria das situações.
+
+Além da limpeza, você pode aplicar **transformações** que reformatam seu texto para propósitos específicos.
+
+## Limpeza base (padrão)
+
+O modo padrão processa toda transcrição:
+
+- Adiciona pontuação e capitalização adequadas.
+- Remove palavras de preenchimento ("é", "tipo", "né", "assim").
+- Corrige problemas gramaticais menores sem alterar o significado.
+- Preserva seu vocabulário e intenção.
+
+**Entrada (falado):** "então é tipo eu acho que a gente deveria mover a reunião pra quinta porque né o cliente não vai estar disponível na quarta"
+
+**Saída:** "Acho que devemos mover a reunião para quinta-feira porque o cliente não estará disponível na quarta."
+
+## Modo de transformação
+
+Quando você tem uma skill ou modo customizado ativo, o Shadow Whisper vai além da limpeza. A IA segue as instruções da skill para transformar seu texto — reescrevendo para tom, formato ou propósito.
+
+Por exemplo, uma skill "Email Profissional" transformaria fala casual em um email formatado com saudação, corpo e assinatura.
+
+## Formatação com contexto
+
+O Shadow Whisper sabe qual site ou app você está usando (baseado no domínio, não no conteúdo da página). Isso ajuda a formatar o texto adequadamente:
+
+- Em um **app de chat** → texto mais curto e conversacional.
+- Em um **editor de documentos** → parágrafos adequados com pontuação.
+- Em um **editor de código** → preserva termos técnicos e formatação.
+
+## Próximos passos
+
+<CardGrid>
+  <LinkCard
+    title="Modos Customizados"
+    href="/modes/custom-modes"
+    description="Crie seus próprios prompts de transformação."
+  />
+</CardGrid>

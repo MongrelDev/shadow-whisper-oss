@@ -1,0 +1,43 @@
+import { setupDebugHandlers } from "./domains/debug.handlers";
+import { setupShellHandlers } from "./domains/shell.handlers";
+import { setupClipboardHandlers } from "./domains/clipboard.handlers";
+import { setupAppHandlers } from "./domains/app.handlers";
+import { setupTranscriptionHandlers } from "./domains/transcription.handlers";
+import { setupRecordingHandlers } from "./domains/recording.handlers";
+import { setupSettingsHandlers } from "./domains/settings.handlers";
+import { setupConfigHandlers } from "./domains/config.handlers";
+import { setupShortcutsHandlers } from "./domains/shortcuts.handlers";
+import { setupDictionaryHandlers } from "./domains/dictionary.handlers";
+import { setupSkillsHandlers } from "./domains/skills.handlers";
+import { setupSkillBuilderHandlers } from "./domains/skill-builder.handlers";
+import { setupSessionHandlers } from "./domains/session.handlers";
+import { setupUserHandlers } from "./domains/user.handlers";
+import { setupAffiliateHandlers } from "./domains/affiliate.handlers";
+import { setupUsageHandlers } from "./domains/usage.handlers";
+import { setupSelectionHandlers } from "./domains/selection.handlers";
+import { setupInteractionHandlers } from "./domains/interaction.handlers";
+import { setupAuthHandlers } from "./domains/auth.handlers";
+import { setupFeedbackHandlers } from "./domains/feedback.handlers";
+
+export function setupIpcHandlers(): void {
+  setupDebugHandlers();
+  setupShellHandlers();
+  setupClipboardHandlers();
+  setupAppHandlers();
+  setupTranscriptionHandlers();
+  setupRecordingHandlers();
+  setupSettingsHandlers();
+  setupConfigHandlers();
+  setupShortcutsHandlers();
+  setupDictionaryHandlers();
+  setupSkillsHandlers();
+  setupSkillBuilderHandlers();
+  setupSessionHandlers();
+  setupUserHandlers();
+  setupAffiliateHandlers();
+  setupUsageHandlers();
+  setupSelectionHandlers();
+  setupInteractionHandlers();
+  setupAuthHandlers();
+  setupFeedbackHandlers();
+}

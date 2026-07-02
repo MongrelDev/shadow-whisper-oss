@@ -1,0 +1,43 @@
+---
+title: Reportar um Problema
+description: Como coletar informações e reportar um bug no Shadow Whisper.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Antes de reportar
+
+1. Verifique o [checklist de resolução de problemas](/troubleshooting/overview) para descartar problemas comuns.
+2. Tente desabilitar outras extensões para descartar conflitos.
+3. Tente em uma janela anônima/privada (com a extensão habilitada) para descartar estado em cache.
+
+## O que incluir
+
+Ao reportar um bug, inclua o máximo possível das seguintes informações:
+
+- **Navegador e versão** (ex: Chrome 126, Edge 126).
+- **Sistema operacional** (ex: macOS 15.3, Windows 11).
+- **Versão da extensão** (visível nas configurações da extensão ou em `chrome://extensions`).
+- **Passos para reproduzir** — o que exatamente você fez antes do problema ocorrer?
+- **Comportamento esperado** — o que deveria ter acontecido?
+- **Comportamento real** — o que aconteceu em vez disso?
+- **Screenshots ou gravações de tela** — se o problema for visual.
+
+## Como reportar
+
+Envie um email para **[privacy@chainbreakertech.com](mailto:privacy@chainbreakertech.com)** com o assunto "Bug Report" e as informações listadas acima.
+
+<Aside type="note">
+  Não inclua informações pessoais sensíveis, senhas ou conteúdo confidencial no seu relatório de
+  bug. Se o problema envolve uma transcrição específica, descreva-o em termos gerais em vez de
+  compartilhar o conteúdo real.
+</Aside>
+
+## Logs do console do navegador
+
+Se você se sente confortável com ferramentas de desenvolvedor, logs do console podem nos ajudar a diagnosticar problemas:
+
+1. Clique com o botão direito no ícone da extensão → **Inspecionar popup** (ou abra `chrome://extensions` → encontre Shadow Whisper → **Inspecionar visualizações: service worker**).
+2. Vá para a aba **Console**.
+3. Reproduza o problema.
+4. Copie a saída do console e inclua no seu relatório.

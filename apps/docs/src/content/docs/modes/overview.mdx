@@ -1,0 +1,51 @@
+---
+title: Modes Overview
+description: Understand how Shadow Whisper modes transform your speech into different text formats.
+---
+
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+## What are modes?
+
+Modes control **how Shadow Whisper processes your speech** after transcription. Think of them as writing assistants with different specializations.
+
+By default, Shadow Whisper performs **intelligent cleanup**: it transcribes your speech faithfully, adds punctuation, removes filler words, and fixes capitalization. This is the base behavior that works for most situations.
+
+Beyond cleanup, you can apply **transformations** that reshape your text for specific purposes.
+
+## Base cleanup (default)
+
+The default mode processes every transcription:
+
+- Adds proper punctuation and capitalization.
+- Removes filler words ("um", "uh", "like", "you know").
+- Fixes minor grammatical issues without changing meaning.
+- Preserves your vocabulary and intent.
+
+**Input (spoken):** "so um I think we should probably move the meeting to uh Thursday because like the client won't be available on Wednesday"
+
+**Output:** "I think we should move the meeting to Thursday because the client won't be available on Wednesday."
+
+## Transform mode
+
+When you have an active skill or custom mode enabled, Shadow Whisper goes beyond cleanup. The AI follows the skill's instructions to transform your text — rewriting for tone, format, or purpose.
+
+For example, a "Professional Email" skill would turn casual speech into a properly formatted email with greeting, body, and sign-off.
+
+## Context-aware formatting
+
+Shadow Whisper knows which website or app you're using (based on the domain, not the page content). This helps it format text appropriately:
+
+- In a **chat app** → shorter, conversational text.
+- In a **document editor** → proper paragraphs with punctuation.
+- In a **code editor** → preserves technical terms and formatting.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="Custom Modes"
+    href="/modes/custom-modes"
+    description="Create your own transformation prompts."
+  />
+</CardGrid>

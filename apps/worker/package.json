@@ -1,0 +1,69 @@
+{
+  "name": "@whisper/worker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale",
+    "predev": "pnpm i18n:compile",
+    "dev": "wrangler dev",
+    "prebuild": "pnpm i18n:compile",
+    "build": "tsc",
+    "lint": "eslint . && node ../../node_modules/@effect/language-service/cli.js diagnostics --project tsconfig.json --severity error,warning --strict --format pretty",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "predeploy": "pnpm i18n:compile",
+    "deploy": "wrangler deploy --env production",
+    "pretypes": "pnpm i18n:compile",
+    "types": "wrangler types",
+    "pretest": "pnpm i18n:compile",
+    "test": "vitest run",
+    "pretest:watch": "pnpm i18n:compile",
+    "test:watch": "vitest",
+    "db:migrate:local": "wrangler d1 migrations apply shadowwhisper-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply shadowwhisper-db --remote --env production",
+    "db:do:usage-ledger:generate": "drizzle-kit generate --config=drizzle.usage-ledger.config.ts"
+  },
+  "dependencies": {
+    "@better-auth/electron": "^1.5.6",
+    "@better-auth/stripe": "^1.5.6",
+    "@effect/sql-d1": "4.0.0-beta.75",
+    "@inlang/paraglide-js": "2.16.0",
+    "@react-email/components": "1.0.12",
+    "@react-email/render": "2.0.8",
+    "@whisper/api": "workspace:*",
+    "@whisper/db": "workspace:*",
+    "agents": "^0.11.6",
+    "ai": "6.0.172",
+    "better-auth": "^1.5.6",
+    "drizzle-orm": "0.38.4",
+    "effect": "4.0.0-beta.75",
+    "evlog": "^2.14.1",
+    "groq-sdk": "^1.2.1",
+    "hono": "4.11.7",
+    "jose": "6.2.0",
+    "mailchecker": "6.0.20",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "stripe": "20.3.0",
+    "workers-ai-provider": "3.1.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.15.0",
+    "@effect/vitest": "4.0.0-beta.74",
+    "@types/node": "22.19.11",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@whisper/config": "workspace:*",
+    "drizzle-kit": "0.30.6",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "4.87.0"
+  }
+}

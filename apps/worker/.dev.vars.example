@@ -1,0 +1,24 @@
+# Local dev secrets for `wrangler dev` (copy to `.dev.vars` and fill in).
+# Wrangler injects these as `env.*` bindings, matching the production runtime shape.
+# Production secrets are set via `wrangler secret put <NAME> --env production`.
+# Public config (like GOOGLE_CLIENT_ID) lives in wrangler.toml [vars] instead.
+
+# Better Auth
+AUTH_SECRET=your-secret-here-at-least-32-characters
+
+# Stripe billing
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Turnstile
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Google OAuth (GOOGLE_CLIENT_ID lives in wrangler.toml [vars] — it's public)
+GOOGLE_CLIENT_SECRET=<client-secret-from-google-cloud-console>
+
+# Session + websocket signing
+WS_TICKET_SECRET=dev-websocket-ticket-secret-at-least-32-chars
+
+# Demo analytics — HMAC key for hashing IPs in the anonymous demo transcript log.
+# Production secrets: `wrangler secret put DEMO_ANALYTICS_SECRET --env production`.
+DEMO_ANALYTICS_SECRET=dev-demo-analytics-secret-at-least-32-chars

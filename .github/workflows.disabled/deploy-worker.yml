@@ -1,0 +1,83 @@
+name: Deploy Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Apply production D1 migrations before deploy"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-worker-production
+  cancel-in-progress: false
+
+env:
+  CI: true
+  HUSKY: 0
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy:
+    name: Deploy worker to Cloudflare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared database package
+        run: pnpm --filter @whisper/db build
+
+      - name: Build worker
+        run: pnpm --filter @whisper/worker build
+
+      - name: Preflight Cloudflare production secrets
+        run: |
+          pnpm --filter @whisper/worker exec wrangler secret list --env production --format json | node -e '
+            let input = "";
+            process.stdin.on("data", (chunk) => input += chunk);
+            process.stdin.on("end", () => {
+              const match = input.match(/\[[\s\S]*\]/);
+              if (!match) throw new Error("Could not parse wrangler secret list output");
+              const names = new Set(JSON.parse(match[0]).map((secret) => secret.name));
+              const required = [
+                "AUTH_SECRET",
+                "STRIPE_SECRET_KEY",
+                "STRIPE_WEBHOOK_SECRET",
+                "TURNSTILE_SECRET_KEY",
+                "GOOGLE_CLIENT_SECRET",
+                "WS_TICKET_SECRET",
+                "GUEST_SECRET",
+                "SHARE_CARD_SECRET",
+              ];
+              const missing = required.filter((name) => !names.has(name));
+              if (missing.length > 0) {
+                console.error(`Missing Cloudflare production secrets: ${missing.join(", ")}`);
+                process.exit(1);
+              }
+              console.log("Cloudflare production secrets preflight passed.");
+            });
+          '
+
+      - name: Apply production migrations
+        if: inputs.run_migrations
+        run: pnpm --filter @whisper/worker db:migrate:remote
+
+      - name: Deploy worker
+        run: pnpm --filter @whisper/worker deploy

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "layerGraphFollowDepth": 5,
+        "diagnosticSeverity": {
+          "catchunfailableeffect": "warning",
+          "leakingrequirements": "warning",
+          "preferschemaoverjson": "warning",
+          "trycatchineffectgen": "warning",
+          "unnecessaryfailyieldableerror": "warning"
+        }
+      }
+    ],
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "paths": {
+      "@whisper/*": ["../../packages/*/src"]
+    }
+  }
+}

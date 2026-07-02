@@ -1,0 +1,57 @@
+name = "shadow-whisper-web-preview"
+compatibility_date = "2026-04-15"
+compatibility_flags = ["nodejs_compat"]
+main = "./worker/index.ts"
+workers_dev = true
+
+[vars]
+API_URL = "http://localhost:8787"
+NEXT_PUBLIC_WORKER_URL = "http://localhost:8787"
+NEXT_PUBLIC_SITE_URL = "http://localhost:3001"
+
+[assets]
+directory = "dist/client"
+not_found_handling = "none"
+binding = "ASSETS"
+
+[images]
+binding = "IMAGES"
+
+[[d1_databases]]
+binding = "WAITLIST_DB"
+database_name = "shadow-whisper-web-waitlist-production"
+database_id = "39d9af6f-436c-4142-8709-fc047fee6ffd"
+preview_database_id = "shadow-whisper-web-waitlist-local"
+migrations_dir = "./migrations"
+
+[env.production.vars]
+API_URL = "https://workers.shadow-whisper.com"
+NEXT_PUBLIC_WORKER_URL = "https://workers.shadow-whisper.com"
+NEXT_PUBLIC_SITE_URL = "https://preview.shadow-whisper.com"
+
+[env.production.assets]
+directory = "dist/client"
+not_found_handling = "none"
+binding = "ASSETS"
+
+[env.production.images]
+binding = "IMAGES"
+
+[[env.production.d1_databases]]
+binding = "WAITLIST_DB"
+database_name = "shadow-whisper-web-waitlist-production"
+database_id = "39d9af6f-436c-4142-8709-fc047fee6ffd"
+preview_database_id = "shadow-whisper-web-waitlist-local"
+migrations_dir = "./migrations"
+
+[[env.production.routes]]
+pattern = "preview.shadow-whisper.com"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "shadow-whisper.com"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "www.shadow-whisper.com"
+custom_domain = true

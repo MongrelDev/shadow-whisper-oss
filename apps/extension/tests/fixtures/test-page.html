@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shadow Whisper E2E Test Page</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px;
+        background: Canvas;
+        color: CanvasText;
+      }
+
+      main {
+        display: grid;
+        gap: 24px;
+        max-width: 820px;
+      }
+
+      section {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        font-weight: 700;
+      }
+
+      textarea,
+      input,
+      [contenteditable] {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid #9ca3af;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      [contenteditable] {
+        min-height: 96px;
+      }
+
+      canvas {
+        border: 1px solid #9ca3af;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Shadow Whisper E2E Test Page</h1>
+      <p id="selectable-text">This sentence can be selected for transformation tests.</p>
+
+      <section>
+        <label for="editor-textarea">Textarea</label>
+        <textarea id="editor-textarea" rows="4">Initial textarea text</textarea>
+      </section>
+
+      <section>
+        <label for="input-field">Input text</label>
+        <input id="input-field" type="text" value="Initial input text" />
+      </section>
+
+      <section>
+        <label for="rich-editor">Contenteditable</label>
+        <div id="rich-editor" contenteditable="true">Initial rich editor text</div>
+      </section>
+
+      <section>
+        <label for="canvas-editor">Canvas fallback surface</label>
+        <canvas id="canvas-editor" width="600" height="96" tabindex="0"></canvas>
+      </section>
+    </main>
+
+    <script>
+      const canvas = document.getElementById("canvas-editor");
+      const ctx = canvas.getContext("2d");
+      ctx.font = "16px sans-serif";
+      ctx.fillText("Canvas text surface", 16, 52);
+    </script>
+  </body>
+</html>

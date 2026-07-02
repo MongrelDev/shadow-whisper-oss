@@ -1,0 +1,49 @@
+---
+title: Installation
+description: How to install the Shadow Whisper browser extension and create your account.
+---
+
+import { LinkCard, CardGrid, Aside } from "@astrojs/starlight/components";
+
+## Install the extension
+
+Shadow Whisper is available as a browser extension for **Chrome**, **Edge**, and other Chromium-based browsers.
+
+1. Visit the [Shadow Whisper download page](/download) or find it in the Chrome Web Store.
+2. Click **Add to Chrome** (or **Add to Edge**).
+3. Confirm the installation when prompted.
+
+After installation, you'll see the Shadow Whisper icon in your browser toolbar.
+
+## Permissions
+
+The extension requests the following permissions:
+
+| Permission          | Why                                                                 |
+| ------------------- | ------------------------------------------------------------------- |
+| **Microphone**      | Required to capture your voice for transcription.                   |
+| **Active Tab**      | Needed to insert transcribed text at your cursor position.          |
+| **Storage**         | Saves your settings, history, and dictionary locally.               |
+| **Clipboard Write** | Fallback method to paste text when direct insertion isn't possible. |
+
+<Aside type="note">
+  Shadow Whisper only accesses the active tab when you trigger a transcription. It does not read or
+  monitor your browsing activity.
+</Aside>
+
+## Create your account
+
+1. Click the Shadow Whisper icon in your toolbar.
+2. Click **Sign In** or **Sign Up**.
+3. Create your account with email or Google.
+4. You're ready to start dictating.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard
+    title="First Dictation"
+    href="/get-started/first-dictation"
+    description="Record your first transcription."
+  />
+</CardGrid>

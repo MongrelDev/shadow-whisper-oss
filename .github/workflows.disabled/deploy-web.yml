@@ -1,0 +1,55 @@
+name: Deploy Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Apply production waitlist D1 migrations before deploy"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-web-production
+  cancel-in-progress: false
+
+env:
+  CI: true
+  HUSKY: 0
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy:
+    name: Deploy web to Cloudflare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared database package
+        run: pnpm --filter @whisper/db build
+
+      - name: Build web for production
+        run: pnpm --filter @whisper/web build:production
+
+      - name: Apply production waitlist migrations
+        if: inputs.run_migrations
+        run: pnpm --filter @whisper/web db:migrate:remote
+
+      - name: Deploy web
+        run: pnpm --filter @whisper/web deploy

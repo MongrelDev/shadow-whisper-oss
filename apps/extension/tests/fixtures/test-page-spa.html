@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shadow Whisper E2E SPA Fixture</title>
+  </head>
+  <body>
+    <nav>
+      <button id="route-a" type="button">Route A</button>
+      <button id="route-b" type="button">Route B</button>
+    </nav>
+    <main id="app">Route A content</main>
+    <script>
+      function render(route) {
+        history.pushState({ route }, "", `#/${route}`);
+        document.getElementById("app").textContent = `Route ${route.toUpperCase()} content`;
+      }
+
+      document.getElementById("route-a").addEventListener("click", () => render("a"));
+      document.getElementById("route-b").addEventListener("click", () => render("b"));
+    </script>
+  </body>
+</html>

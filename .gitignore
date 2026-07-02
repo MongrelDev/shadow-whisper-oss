@@ -1,0 +1,98 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Build outputs
+dist/
+out/
+build/
+release/
+.turbo/
+.next/
+.vinext/
+next-env.d.ts
+*.tsbuildinfo
+
+# Vendored VAD assets copied into web public/ at build time
+apps/web/public/vad/
+apps/extension/public/vad/
+
+# Environment files
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Deployment outputs
+.vercel/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+.cursorrules
+.cursorignore
+.zed/
+
+# Local AI/agent tooling (not committed)
+.agent/
+.agents/
+.claude/
+.codex/
+.opencode/
+.impeccable/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+playwright-report/
+test-results/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Vendored reference repos (git subtree)
+repos/
+
+# Wrangler
+.wrangler/
+
+# Navigator context markers
+.agent/.context-markers/
+!.agent/.context-markers/.gitkeep
+
+# Navigator temporary files
+.agent/.nav-temp/
+
+# Fumadocs generated source
+apps/web/.source/
+
+# Astro generated types
+apps/docs/.astro/
+
+# Paraglide compiled output
+apps/web/paraglide/
+apps/desktop/src/renderer/paraglide/
+apps/worker/src/paraglide/
+
+# Internal docs: keep locally, never commit. Only README files and
+# markdown that is part of the source code (under any src/) are tracked.
+*.md
+!/README.md
+!/apps/*/README.md
+!**/src/**/*.md
+
+# GSD (get-shit-done) internal planning state — local only
+.planning/

@@ -1,0 +1,50 @@
+version: "3"
+
+silent: true
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  bootstrap:
+    desc: Reset local dev environment from scratch (auth → clean → migrate)
+    cmds:
+      - task: check-auth
+      - task: clean
+      - task: migrate
+      - echo ""
+      - echo "Bootstrap complete. Run 'task dev' to start the worker."
+
+  check-auth:
+    desc: Verify wrangler is authenticated; prompt login if not
+    cmds:
+      - |
+        if ! pnpm -F @whisper/worker exec wrangler whoami > /dev/null 2>&1; then
+          echo "Wrangler not authenticated — opening login flow..."
+          pnpm -F @whisper/worker exec wrangler login
+        else
+          echo "Wrangler authenticated: $(pnpm -F @whisper/worker exec wrangler whoami 2>/dev/null | grep -E 'email|account' | head -1)"
+        fi
+
+  clean:
+    desc: Wipe local wrangler state (D1, R2, KV simulation data)
+    cmds:
+      - rm -rf apps/worker/.wrangler
+      - echo "Cleaned apps/worker/.wrangler"
+
+  migrate:
+    desc: Apply D1 migrations to the local database
+    cmds:
+      - pnpm -F @whisper/worker db:migrate:local
+
+  dev:
+    desc: Start the worker dev server
+    cmds:
+      - pnpm -F @whisper/worker dev
+
+  desktop:
+    desc: Start the desktop app
+    cmds:
+      - pnpm -F @whisper/desktop dev

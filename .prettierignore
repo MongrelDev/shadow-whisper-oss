@@ -1,0 +1,17 @@
+dist
+node_modules
+.turbo
+.planning/**
+**/.wrangler/**
+**/.wxt/**
+**/.output/**
+**/out/**
+.agents
+.claude
+.codex
+.opencode
+pnpm-lock.yaml
+apps/worker/worker-configuration.d.ts
+**/paraglide/**
+**/project.inlang/**
+**/public/vad/**

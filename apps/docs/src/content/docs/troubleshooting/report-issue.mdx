@@ -1,0 +1,43 @@
+---
+title: Report an Issue
+description: How to collect information and report a bug in Shadow Whisper.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+## Before reporting
+
+1. Check the [Troubleshooting checklist](/troubleshooting/overview) to rule out common issues.
+2. Try disabling other extensions to rule out conflicts.
+3. Try in an incognito/private window (with the extension enabled) to rule out cached state.
+
+## What to include
+
+When reporting a bug, include as much of the following as possible:
+
+- **Browser and version** (e.g., Chrome 126, Edge 126).
+- **Operating system** (e.g., macOS 15.3, Windows 11).
+- **Extension version** (visible in the extension settings or `chrome://extensions`).
+- **Steps to reproduce** — what exactly did you do before the issue occurred?
+- **Expected behavior** — what should have happened?
+- **Actual behavior** — what happened instead?
+- **Screenshots or screen recordings** — if the issue is visual.
+
+## How to report
+
+Send an email to **[privacy@chainbreakertech.com](mailto:privacy@chainbreakertech.com)** with the subject line "Bug Report" and the information listed above.
+
+<Aside type="note">
+  Do not include sensitive personal information, passwords, or confidential content in your bug
+  report. If the issue involves a specific transcription, describe it in general terms rather than
+  sharing the actual content.
+</Aside>
+
+## Browser console logs
+
+If you're comfortable with developer tools, console logs can help us diagnose issues:
+
+1. Right-click the extension icon → **Inspect popup** (or open `chrome://extensions` → find Shadow Whisper → **Inspect views: service worker**).
+2. Go to the **Console** tab.
+3. Reproduce the issue.
+4. Copy the console output and include it in your report.

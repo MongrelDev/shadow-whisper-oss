@@ -1,0 +1,66 @@
+---
+title: Custom Modes
+description: Create custom transformation prompts to tailor Shadow Whisper to your specific workflows.
+---
+
+## What are custom modes?
+
+Custom modes (called **skills**) are prompts that tell Shadow Whisper how to transform your transcribed text. Instead of just cleaning up your speech, a skill can rewrite it for a specific purpose.
+
+## Using skills
+
+### Voice activation
+
+You can activate a skill by speaking its name at the beginning of your dictation:
+
+- "**Use sales skill** — I just had a great call with the prospect and they're interested in the enterprise plan..."
+- "**Apply email skill** — hey John just wanted to follow up on our conversation yesterday..."
+- "**Use caveman skill** — we need to deploy the new feature by Friday..."
+
+Shadow Whisper matches your words semantically to the installed skill's name and description. You can refer to skills in any language.
+
+### Forced skill
+
+You can also set a skill as your **default mode** in settings. When a forced skill is active, every transcription passes through that skill's instructions — no voice activation needed.
+
+## Installing skills
+
+Shadow Whisper has a catalog of pre-built skills you can install:
+
+1. Open the extension side panel.
+2. Navigate to **Skills**.
+3. Browse the catalog and install skills that match your workflow.
+
+## Writing your own skills
+
+Skills are defined in Markdown. A good skill prompt should:
+
+- **Be specific** about the desired output format.
+- **Include examples** of input/output when helpful.
+- **Define boundaries** — what the skill should and shouldn't change.
+
+### Example: Meeting Notes skill
+
+```markdown
+Transform the dictated text into structured meeting notes.
+
+## Format
+
+- Start with a one-line summary
+- List key decisions as bullet points
+- List action items with owners if mentioned
+- Keep it concise — no filler
+
+## Rules
+
+- Preserve names, dates, and numbers exactly
+- If the speaker mentions a deadline, highlight it
+- Don't invent information that wasn't spoken
+```
+
+## Tips for effective skills
+
+- **Start simple** — a few clear rules work better than a wall of instructions.
+- **Test iteratively** — dictate sample text and refine the prompt based on results.
+- **Be explicit about format** — if you want bullet points, say so. If you want paragraphs, say so.
+- **Don't over-constrain** — the AI needs room to handle varied input naturally.

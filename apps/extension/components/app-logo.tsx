@@ -1,0 +1,24 @@
+interface AppLogoProps {
+  className?: string;
+}
+
+export function AppLogo({ className }: AppLogoProps): React.ReactElement {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 102 80"
+      className={`text-foreground ${className ?? ""}`}
+      aria-hidden="true"
+    >
+      <g fill="currentColor" stroke="none">
+        <rect x="0" y="28" width="6" height="24" rx="3" />
+        <rect x="16" y="20" width="6" height="40" rx="3" />
+        <rect x="32" y="0" width="6" height="80" rx="3" />
+        <rect x="48" y="28" width="6" height="24" rx="3" />
+        <rect x="64" y="11.7" width="6" height="56.6" rx="3" />
+        <rect x="80" y="0" width="6" height="80" rx="3" />
+        <rect x="96" y="28" width="6" height="24" rx="3" />
+      </g>
+    </svg>
+  );
+}

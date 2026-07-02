@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "effect-smol": {
+      "repository": "Effect-TS/effect-smol",
+      "branch": "main",
+      "description": "Use for Effect-TS effect-smol patterns, API design, and module structure"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  better-sqlite3: true
+  core-js: true
+  core-js-pure: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  msgpackr-extract: false
+  protobufjs: true
+  sharp: true
+  spawn-sync: true
+  unrs-resolver: true
+  workerd: true
+
+# Require npm package versions to be at least 3 days old before install.
+# pnpm uses minutes here: 3 * 24 * 60 = 4320.
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  - "effect"
+  - "@radix-ui/*"
+  - "acorn"
+  - "@jridgewell/*"
+  - "wrap-ansi"
+  - "string-width"
+  - "strip-ansi"
+  - "ansi-regex"
+  - "ansi-styles"
+  - "@isaacs/cliui"

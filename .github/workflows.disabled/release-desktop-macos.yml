@@ -1,0 +1,84 @@
+name: Release Desktop macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Desktop version to release (e.g. 0.0.2, 0.0.2-preview)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark GitHub release as prerelease"
+        type: boolean
+        default: true
+      arch:
+        description: "macOS architecture"
+        type: choice
+        options:
+          - x64
+          - arm64
+        default: x64
+
+concurrency:
+  group: release-desktop-macos-${{ inputs.version }}-${{ inputs.arch }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+  HUSKY: 0
+  CSC_IDENTITY_AUTO_DISCOVERY: false
+  VITE_WORKER_URL: https://workers.shadow-whisper.com
+  VITE_WEB_URL: https://preview.shadow-whisper.com
+
+jobs:
+  release:
+    name: Build unsigned macOS app
+    runs-on: macos-13
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build native modules
+        run: |
+          bash apps/desktop/scripts/build-macos-text-monitor.sh
+          pnpm --filter @whisper/native-input build:native:${{ inputs.arch }}
+
+      - name: Build Electron app
+        run: pnpm --filter @whisper/desktop exec electron-vite build
+
+      - name: Package macOS app (version injected)
+        run: pnpm --filter @whisper/desktop exec electron-builder --mac --${{ inputs.arch }} --dir --config.extraMetadata.version=${{ inputs.version }}
+
+      - name: Archive app bundle
+        run: |
+          cd apps/desktop/release
+          APP_PATH="$(find . -maxdepth 2 -name 'ShadowWhisper.app' -type d | head -1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "ShadowWhisper.app not found"
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "ShadowWhisper-${{ inputs.version }}-macos-${{ inputs.arch }}-unsigned.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ inputs.version }}-${{ inputs.arch }}
+          name: Desktop v${{ inputs.version }} (${{ inputs.arch }}, unsigned)
+          prerelease: ${{ inputs.prerelease }}
+          files: apps/desktop/release/ShadowWhisper-${{ inputs.version }}-macos-${{ inputs.arch }}-unsigned.zip

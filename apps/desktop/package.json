@@ -1,0 +1,195 @@
+{
+  "name": "@whisper/desktop",
+  "productName": "ShadowWhisper",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "build:mac": "bash scripts/build-macos-text-monitor.sh && electron-vite build && electron-builder --mac --dir",
+    "build:mac:arm64": "bash scripts/build-macos-text-monitor.sh && pnpm --filter @whisper/native-input build:native:arm64 && electron-vite build && electron-builder --mac --arm64 --dir",
+    "build:mac:x64": "bash scripts/build-macos-text-monitor.sh && pnpm --filter @whisper/native-input build:native:x64 && electron-vite build && electron-builder --mac --x64 --dir",
+    "build:win:x64": "bash scripts/build-windows-text-monitor.sh && pnpm --filter @whisper/native-input build:native:x64 && electron-vite build && electron-builder --win --x64",
+    "build:win:arm64": "bash scripts/build-windows-text-monitor.sh && pnpm --filter @whisper/native-input build:native:arm64 && electron-vite build && electron-builder --win --arm64",
+    "build:linux:x64": "bash scripts/build-linux-text-monitor.sh && pnpm --filter @whisper/native-input build:native:x64 && electron-vite build && electron-builder --linux --x64",
+    "build:linux:arm64": "bash scripts/build-linux-text-monitor.sh && pnpm --filter @whisper/native-input build:native:arm64 && electron-vite build && electron-builder --linux --arm64",
+    "start": "open release/mac-arm64/ShadowWhisper.app",
+    "dev:build": "pnpm build:mac && pnpm start",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/renderer/tsconfig.json",
+    "lint": "eslint . --no-error-on-unmatched-pattern",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:e2e": "electron-vite build && playwright test",
+    "test:e2e:headed": "electron-vite build && playwright test --headed"
+  },
+  "build": {
+    "appId": "com.shadowwhisper.app",
+    "productName": "ShadowWhisper",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../../packages/native-input/build/Release/native_input.node",
+        "to": "native_input.node"
+      },
+      {
+        "from": "resources-build/macos-text-monitor",
+        "to": "macos-text-monitor"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/icon@2x.png",
+        "to": "icon@2x.png"
+      },
+      {
+        "from": "resources/icon@3x.png",
+        "to": "icon@3x.png"
+      },
+      {
+        "from": "resources/iconTemplate.png",
+        "to": "iconTemplate.png"
+      },
+      {
+        "from": "resources/iconTemplate@2x.png",
+        "to": "iconTemplate@2x.png"
+      },
+      {
+        "from": "resources/iconTemplate@3x.png",
+        "to": "iconTemplate@3x.png"
+      }
+    ],
+    "mac": {
+      "icon": "resources/app-icon.icns",
+      "category": "public.app-category.productivity",
+      "target": "dir",
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "binaries": [
+        "resources-build/macos-text-monitor"
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "ShadowWhisper precisa de acesso ao microfone para gravar e transcrever sua voz."
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "resources-build/windows-text-monitor.exe",
+          "to": "windows-text-monitor.exe"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "resources-build/linux-text-monitor",
+          "to": "linux-text-monitor"
+        },
+        {
+          "from": "resources-build/linux-text-monitor.py",
+          "to": "linux-text-monitor.py"
+        }
+      ]
+    },
+    "protocols": {
+      "name": "ShadowWhisper",
+      "schemes": [
+        "com.shadowwhisper.app"
+      ]
+    }
+  },
+  "dependencies": {
+    "@better-auth/electron": "^1.5.6",
+    "@better-auth/stripe": "^1.5.6",
+    "@electron-toolkit/utils": "3.0.0",
+    "@fontsource-variable/geist": "5.2.8",
+    "@fontsource-variable/geist-mono": "5.2.7",
+    "@hookform/resolvers": "5.2.2",
+    "@inlang/paraglide-js": "2.16.0",
+    "@radix-ui/react-avatar": "1.1.11",
+    "@radix-ui/react-collapsible": "1.1.12",
+    "@radix-ui/react-dialog": "1.1.15",
+    "@radix-ui/react-dropdown-menu": "2.1.16",
+    "@radix-ui/react-label": "2.1.8",
+    "@radix-ui/react-popover": "1.1.15",
+    "@radix-ui/react-select": "2.2.6",
+    "@radix-ui/react-slider": "1.3.6",
+    "@radix-ui/react-slot": "1.2.4",
+    "@radix-ui/react-tabs": "1.1.13",
+    "@radix-ui/react-tooltip": "1.2.8",
+    "@tailwindcss/postcss": "4.1.18",
+    "@tanstack/react-query": "5.90.20",
+    "@tanstack/react-router": "1.158.0",
+    "@whisper/api": "workspace:*",
+    "@whisper/native-input": "workspace:^",
+    "@zumer/snapdom": "2.12.0",
+    "better-auth": "^1.5.6",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
+    "conf": "^15.1.0",
+    "dexie": "4.3.0",
+    "dexie-react-hooks": "4.2.0",
+    "diff": "8.0.4",
+    "driver.js": "1.4.0",
+    "es-toolkit": "1.44.0",
+    "lucide-react": "0.563.0",
+    "motion": "12.30.0",
+    "postcss": "8.5.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "7.71.2",
+    "react-markdown": "10.1.0",
+    "sonner": "2.0.7",
+    "tailwind-merge": "3.4.0",
+    "tailwindcss": "4.1.18",
+    "zod": "4.3.6",
+    "zustand": "5.0.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "4.7.0",
+    "@whisper/config": "workspace:*",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "electron": "41.3.0",
+    "electron-builder": "26.7.0",
+    "electron-vite": "2.3.0",
+    "sharp": "0.34.5",
+    "typescript": "5.9.3",
+    "vite": "5.4.21",
+    "vitest": "^2.1.9"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@whisper/docs",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "lint": "eslint \"**/*.{js,mjs,cjs,ts,tsx}\" --no-error-on-unmatched-pattern",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "preview": "astro preview",
+    "deploy": "astro build && wrangler pages deploy dist"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.5.1",
+    "@astrojs/starlight": "^0.35.1",
+    "astro": "5.18.1",
+    "sharp": "^0.33.5"
+  }
+}

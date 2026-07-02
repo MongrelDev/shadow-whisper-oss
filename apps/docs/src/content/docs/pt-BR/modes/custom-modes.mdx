@@ -1,0 +1,66 @@
+---
+title: Modos Customizados
+description: Crie prompts de transformação personalizados para adaptar o Shadow Whisper aos seus fluxos de trabalho.
+---
+
+## O que são modos customizados?
+
+Modos customizados (chamados de **skills**) são prompts que dizem ao Shadow Whisper como transformar seu texto transcrito. Em vez de apenas limpar sua fala, uma skill pode reescrevê-la para um propósito específico.
+
+## Usando skills
+
+### Ativação por voz
+
+Você pode ativar uma skill falando seu nome no início da ditação:
+
+- "**Usar skill de vendas** — acabei de ter uma ótima ligação com o prospect e eles estão interessados no plano enterprise..."
+- "**Aplicar skill de email** — oi João queria dar um follow up na nossa conversa de ontem..."
+- "**Usar habilidade homem das cavernas** — precisamos deployar a feature nova até sexta..."
+
+O Shadow Whisper faz correspondência semântica das suas palavras com o nome e descrição da skill instalada. Você pode se referir a skills em qualquer idioma.
+
+### Skill forçada
+
+Você também pode definir uma skill como seu **modo padrão** nas configurações. Quando uma skill forçada está ativa, toda transcrição passa pelas instruções dessa skill — sem necessidade de ativação por voz.
+
+## Instalando skills
+
+O Shadow Whisper tem um catálogo de skills prontas que você pode instalar:
+
+1. Abra o painel lateral da extensão.
+2. Navegue até **Skills**.
+3. Explore o catálogo e instale skills que combinam com seu fluxo de trabalho.
+
+## Escrevendo suas próprias skills
+
+Skills são definidas em Markdown. Um bom prompt de skill deve:
+
+- **Ser específico** sobre o formato de saída desejado.
+- **Incluir exemplos** de entrada/saída quando útil.
+- **Definir limites** — o que a skill deve e não deve alterar.
+
+### Exemplo: Skill de Notas de Reunião
+
+```markdown
+Transforme o texto ditado em notas de reunião estruturadas.
+
+## Formato
+
+- Comece com um resumo de uma linha
+- Liste decisões-chave como bullet points
+- Liste itens de ação com responsáveis se mencionados
+- Mantenha conciso — sem enrolação
+
+## Regras
+
+- Preserve nomes, datas e números exatamente
+- Se o falante mencionar um prazo, destaque-o
+- Não invente informações que não foram ditas
+```
+
+## Dicas para skills eficazes
+
+- **Comece simples** — poucas regras claras funcionam melhor que uma parede de instruções.
+- **Teste iterativamente** — dite textos de amostra e refine o prompt com base nos resultados.
+- **Seja explícito sobre formato** — se quer bullet points, diga. Se quer parágrafos, diga.
+- **Não restrinja demais** — a IA precisa de espaço para lidar com entrada variada naturalmente.

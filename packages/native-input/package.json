@@ -1,0 +1,40 @@
+{
+  "name": "@whisper/native-input",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Native text input simulation for ShadowWhisper (macOS/Windows/Linux)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build-swift-macos.mjs && node -e \"process.platform==='linux'&&process.exit(0)\" || node-gyp rebuild && tsc",
+    "build:native": "node scripts/build-swift-macos.mjs && node-gyp rebuild",
+    "build:native:arm64": "node scripts/build-swift-macos.mjs && node-gyp rebuild --arch=arm64",
+    "build:native:x64": "node scripts/build-swift-macos.mjs && node-gyp rebuild --arch=x64",
+    "build:ts": "tsc",
+    "clean": "node-gyp clean && rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --no-error-on-unmatched-pattern",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "files": [
+    "dist",
+    "build/Release/*.node",
+    "binding.gyp",
+    "src"
+  ],
+  "devDependencies": {
+    "@types/node": "25.2.0",
+    "@whisper/config": "workspace:*",
+    "node-addon-api": "8.5.0",
+    "node-gyp": "10.3.1",
+    "typescript": "5.9.3"
+  }
+}

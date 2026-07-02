@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Microphone Permission — Shadow Whisper</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #0f0f0f;
+        color: #e5e5e5;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+      button {
+        padding: 0.625rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #6366f1;
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4f46e5;
+      }
+      #error {
+        color: #f87171;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Grant microphone access to ShadowWhisper</h1>
+    <button id="grant">Grant</button>
+    <p id="error"></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

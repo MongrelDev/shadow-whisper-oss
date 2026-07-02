@@ -1,0 +1,16 @@
+{
+  "extends": "@whisper/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "paths": {
+      "@whisper/*": ["../../packages/*/src"]
+    }
+  },
+  "include": [
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/renderer/paraglide/**/*",
+    "electron.vite.config.ts"
+  ]
+}

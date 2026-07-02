@@ -1,0 +1,46 @@
+---
+title: Troubleshooting
+description: Quick checklist for common Shadow Whisper issues.
+---
+
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+## Quick checklist
+
+If Shadow Whisper isn't working as expected, run through this checklist:
+
+### Recording doesn't start
+
+1. **Check microphone permission** — click the extension icon and ensure microphone access is granted. You may need to allow it in your browser's site settings.
+2. **Check the keyboard shortcut** — the default is <kbd>Alt+Space</kbd> (Mac) or <kbd>Alt+Shift+W</kbd> (Windows/Linux). Another extension or app may be using the same shortcut.
+3. **Check if you're signed in** — open the extension side panel and verify you're logged in.
+4. **Try a different tab** — some restricted pages (chrome://, browser settings) don't allow extensions to run.
+
+### Text isn't inserted
+
+1. **Click into a text field first** — Shadow Whisper inserts text at the cursor position. If no text field is focused, it falls back to the clipboard.
+2. **Check clipboard permissions** — the extension needs clipboard write access.
+3. **Try a simpler text field** — some rich text editors (Google Docs, Notion) handle input differently. Try a plain text input first.
+
+### Transcription is slow or fails
+
+1. **Check your internet connection** — transcription requires a connection to our cloud service.
+2. **Check audio length** — very long recordings may take longer to process.
+3. **Try again** — transient network issues can cause occasional failures. The extension will retry automatically in some cases.
+
+### Wrong language
+
+Shadow Whisper detects the spoken language automatically. If it consistently detects the wrong language:
+
+1. **Speak in one language at a time** — mixing languages in a single recording can confuse detection.
+2. **Check your language settings** — you can set a preferred language in the extension settings to override auto-detection.
+
+## Still stuck?
+
+<CardGrid>
+  <LinkCard
+    title="Report an Issue"
+    href="/troubleshooting/report-issue"
+    description="How to collect information and report a bug."
+  />
+</CardGrid>
