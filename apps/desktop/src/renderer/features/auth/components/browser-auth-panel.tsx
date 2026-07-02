@@ -1,10 +1,9 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, LogIn, ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
@@ -39,16 +38,17 @@ export function BrowserAuthPanel({
 }: BrowserAuthPanelProps): React.ReactElement {
   return (
     <div className="space-y-4">
-      <Button
+      <AsyncButton
         type="button"
         size="lg"
         className="w-full gap-2"
-        disabled={isRequestingAuth}
+        isPending={isRequestingAuth}
+        pendingLabel={m.auth_login_browser_redirecting()}
         onClick={onRequestAuth}
       >
         <LogIn className="size-4" aria-hidden="true" />
-        {isRequestingAuth ? m.auth_login_browser_redirecting() : m.auth_login_email_button()}
-      </Button>
+        {m.auth_login_email_button()}
+      </AsyncButton>
 
       <ErrorAlert message={requestError} />
 
@@ -155,9 +155,14 @@ function ManualTokenFallback({
 
           <ErrorAlert message={authError} />
 
-          <Button type="submit" className="w-full" disabled={isAuthenticating}>
+          <AsyncButton
+            type="submit"
+            className="w-full"
+            isPending={isAuthenticating}
+            pendingLabel={m.auth_browser_token_submit()}
+          >
             {m.auth_browser_token_submit()}
-          </Button>
+          </AsyncButton>
         </form>
       </div>
     </div>

@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { m } from "~/paraglide/messages";
 import { PendingSuggestionCard } from "../components/pending-suggestion-card";
 import { usePendingSuggestions } from "../hooks/use-pending-suggestions";
@@ -7,10 +6,7 @@ export function PendingSuggestionsPanel(): React.ReactElement | null {
   const { suggestions, isLoading, accept, reject, isAccepting, isRejecting } =
     usePendingSuggestions();
 
-  const sorted = useMemo(
-    () => [...suggestions].sort((a, b) => b.createdAt - a.createdAt),
-    [suggestions]
-  );
+  const sorted = [...suggestions].sort((a, b) => b.createdAt - a.createdAt);
 
   if (isLoading) return null;
   if (sorted.length === 0) return null;

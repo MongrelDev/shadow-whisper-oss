@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { m } from "~/paraglide/messages";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDictionary, useDictionaryMutations } from "@/hooks/use-dictionary";
@@ -11,10 +10,17 @@ import { AddSnippetModal } from "../components/add-snippet-modal";
 
 function DictionaryLoadingState(): React.ReactElement {
   return (
-    <div className="h-full flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
-        <p className="text-sm text-muted-foreground">{m.dictionary_loading()}</p>
+    <div aria-busy="true" aria-label={m.dictionary_loading()}>
+      <span className="block h-9 w-48 animate-pulse rounded-md bg-muted" />
+      <span className="mt-3 block h-4 w-72 animate-pulse rounded bg-muted/70" />
+      <span className="mt-6 block h-9 w-56 animate-pulse rounded-lg bg-muted" />
+      <div className="mt-6 rounded-xl border border-border bg-card p-6">
+        <span className="block h-4 w-32 animate-pulse rounded bg-muted" />
+        <div className="mt-5 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <span key={i} className="block h-5 w-[60%] animate-pulse rounded bg-muted/70" />
+          ))}
+        </div>
       </div>
     </div>
   );

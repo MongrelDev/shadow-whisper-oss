@@ -23,7 +23,7 @@ export function AudioWaveform({ isActive, barCount = 5 }: AudioWaveformProps): R
           <motion.div
             key={index}
             className={`w-1 rounded transition-colors duration-300 ${
-              isActive ? "bg-success" : "bg-white/30"
+              isActive ? "bg-success" : "bg-muted-foreground/40"
             }`}
             initial={{ height: 8 }}
             animate={{

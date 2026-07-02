@@ -56,12 +56,20 @@ export function WordList({ words, mutations, onAdd }: WordListProps): React.Reac
               )}
             >
               <span className="text-base text-foreground font-medium">{word.word}</span>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title={m.dictionary_button_remove()}
                 onClick={() => mutations.removeWord.mutate(word.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-destructive/10"
+                className={cn(
+                  "size-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                  "opacity-0 transition-opacity group-hover:opacity-100",
+                  "group-focus-within:opacity-100 focus-visible:opacity-100"
+                )}
               >
-                <X className="w-4 h-4 text-muted-foreground hover:text-destructive transition-colors" />
-              </button>
+                <X className="size-4" />
+              </Button>
             </div>
           ))}
         </div>

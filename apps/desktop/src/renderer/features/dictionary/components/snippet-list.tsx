@@ -66,12 +66,20 @@ export function SnippetList({ snippets, mutations, onAdd }: SnippetListProps): R
                   {snippet.expandedText}
                 </span>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title={m.dictionary_button_remove()}
                 onClick={() => mutations.removeSnippet.mutate(snippet.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-destructive/10 shrink-0 ml-3"
+                className={cn(
+                  "ml-3 size-8 shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                  "opacity-0 transition-opacity group-hover:opacity-100",
+                  "group-focus-within:opacity-100 focus-visible:opacity-100"
+                )}
               >
-                <X className="w-4 h-4 text-muted-foreground hover:text-destructive transition-colors" />
-              </button>
+                <X className="size-4" />
+              </Button>
             </div>
           ))}
         </div>

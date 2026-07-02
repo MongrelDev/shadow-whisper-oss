@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
 import { m } from "~/paraglide/messages";
+import { getLocale } from "~/paraglide/runtime";
 import { cn } from "@/lib/utils";
 import type { AffiliateReferralItem, ReferralStatus } from "../../../../shared/ipc-types";
 
@@ -12,13 +13,13 @@ function getStatusLabel(status: ReferralStatus): string {
 
 const STATUS_COLORS: Record<ReferralStatus, string> = {
   pending: "text-muted-foreground",
-  qualified: "text-violet-500",
+  qualified: "text-primary",
   rewarded: "text-foreground",
   rejected: "text-destructive",
 };
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", {
+  return new Date(iso).toLocaleDateString(getLocale(), {
     day: "numeric",
     month: "short",
   });
@@ -58,7 +59,7 @@ export function ReferralList({ referrals }: ReferralListProps): React.ReactEleme
           </div>
 
           {r.rewardGranted && (
-            <span className="shrink-0 rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-500">
+            <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
               {m.affiliate_referral_reward_label()}
             </span>
           )}

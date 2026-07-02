@@ -1,6 +1,7 @@
 import { Mic } from "lucide-react";
 import { m } from "~/paraglide/messages";
 import { AudioPlayerProvider } from "@/components/ui/audio-player";
+import { ShortcutKeys } from "@/components/ui/shortcut-keys";
 import type { Transcription } from "@/lib/db";
 
 interface GroupedHistory {
@@ -94,7 +95,7 @@ function Section({
   );
 }
 
-function EmptyState(): React.ReactElement {
+function EmptyState({ recordAccelerator }: { recordAccelerator?: string }): React.ReactElement {
   return (
     <div className="relative mx-auto w-full" data-tour="home-history">
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
@@ -109,13 +110,11 @@ function EmptyState(): React.ReactElement {
         <div className="px-6 py-16 text-center">
           <Mic className="mx-auto mb-4 size-6 text-muted-foreground/30" strokeWidth={1.5} />
           <p className="text-sm font-medium text-foreground">{m.home_empty_state_title()}</p>
-          <p className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-muted-foreground">
-            {m.home_empty_state_subtitle_prefix()}{" "}
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-              ⌘⇧⌥W
-            </kbd>{" "}
-            {m.home_empty_state_subtitle_suffix()}
-          </p>
+          <div className="mx-auto mt-2 flex max-w-xs flex-wrap items-center justify-center gap-1.5 text-xs leading-relaxed text-muted-foreground">
+            <span>{m.home_empty_state_subtitle_prefix()}</span>
+            <ShortcutKeys accelerator={recordAccelerator ?? "CommandOrControl+Alt+W"} size="sm" />
+            <span>{m.home_empty_state_subtitle_suffix()}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -150,17 +149,20 @@ interface HistoryListProps {
   history: Transcription[] | undefined;
   isLoading: boolean;
   renderItem: (entry: Transcription) => React.ReactElement;
+  recordAccelerator?: string;
 }
 
 export function HistoryList({
   history,
   isLoading,
   renderItem,
+  recordAccelerator,
 }: HistoryListProps): React.ReactElement {
   if (isLoading) return <LoadingState />;
 
   const grouped = history ? groupByDate(history) : null;
-  if (!grouped || grouped.totalCount === 0) return <EmptyState />;
+  if (!grouped || grouped.totalCount === 0)
+    return <EmptyState recordAccelerator={recordAccelerator} />;
 
   const sections = [
     { label: m.home_section_today(), items: grouped.today },

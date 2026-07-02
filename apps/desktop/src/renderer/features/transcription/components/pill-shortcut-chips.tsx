@@ -19,7 +19,7 @@ const shortcutVariants = cva(
         sm: "h-5 gap-1 px-1.5 text-[11px]",
       },
       tone: {
-        subtle: "border-white/5 bg-white/[0.06]",
+        subtle: "border-border/40 bg-muted/40",
         muted: "border-border/50 bg-muted/50",
       },
       textColor: {

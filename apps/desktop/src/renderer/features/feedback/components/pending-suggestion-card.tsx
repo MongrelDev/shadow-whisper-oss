@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { m } from "~/paraglide/messages";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { PendingSuggestion } from "../types/pending-suggestion";
 
 interface PendingSuggestionCardProps {
@@ -35,19 +35,14 @@ export function PendingSuggestionCard({
 
   return (
     <Card>
-      <CardHeader className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{m.feedback_card_title()}</CardTitle>
-          <span className="text-xs text-muted-foreground">
-            {formatRelative(suggestion.createdAt)}
-          </span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 pt-6">
         <div className="flex items-center gap-2 text-sm">
           <span className="line-through text-muted-foreground truncate">{original}</span>
           <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
           <span className="font-medium truncate">{replacement}</span>
+          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+            {formatRelative(suggestion.createdAt)}
+          </span>
         </div>
         {context && <p className="text-xs text-muted-foreground line-clamp-2">{context}</p>}
       </CardContent>

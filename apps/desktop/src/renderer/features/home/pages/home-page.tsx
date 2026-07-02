@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useHistory } from "@/hooks/use-history";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import { useSubscriptionStatus } from "@/hooks/use-user";
 import { HomeTourMount } from "~/features/home-tour/containers/home-tour-mount";
 import { PendingSuggestionsPanel } from "~/features/feedback/containers/pending-suggestions-panel";
@@ -80,6 +81,7 @@ function PlanAndRecordingRow({
 
 export function HomePage(): React.ReactElement {
   const history = useHistory(50);
+  const { shortcuts } = useShortcuts();
   const { data: subscription } = useSubscriptionStatus();
   const { data: stats, isPending: statsPending } = useUserStats();
   const navigate = useNavigate();
@@ -111,6 +113,7 @@ export function HomePage(): React.ReactElement {
         history={history}
         isLoading={history === undefined}
         renderItem={(entry) => <TranscriptionItemContainer entry={entry} />}
+        recordAccelerator={shortcuts?.transcription}
       />
 
       <AchievementsModal stats={stats} open={badgesOpen} onOpenChange={setBadgesOpen} />

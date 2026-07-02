@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { m } from "~/paraglide/messages";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSkillsList } from "../hooks/use-skills-rpc";
 import { useInstallSkill } from "../hooks/use-install-skill";
 import { useUninstallSkill } from "../hooks/use-uninstall-skill";
@@ -69,9 +70,21 @@ function useOrphanShortcutCleanup(
 
 function SkillsLoadingState(): React.ReactElement {
   return (
-    <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-16">
-      <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
-      <p className="text-sm text-muted-foreground">{m.skills_loading()}</p>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={m.skills_loading()}
+      className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-card"
+    >
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+          <div className="min-w-0 flex-1 space-y-2">
+            <span className="block h-4 w-40 animate-pulse rounded bg-muted" />
+            <span className="block h-3 w-[70%] animate-pulse rounded bg-muted/70" />
+          </div>
+          <span className="h-8 w-32 shrink-0 animate-pulse rounded-md bg-muted" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -84,38 +97,16 @@ function TabBar({
   onTabChange: (tab: SkillsTab) => void;
 }): JSX.Element {
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-      <TabButton active={tab === "official"} onClick={() => onTabChange("official")}>
-        {m.skills_tab_official()}
-      </TabButton>
-      <TabButton active={tab === "mine"} onClick={() => onTabChange("mine")}>
-        {m.skills_tab_mine()}
-      </TabButton>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-        active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
+    <Tabs value={tab} onValueChange={(value) => onTabChange(value as SkillsTab)}>
+      <TabsList className="h-9">
+        <TabsTrigger value="official" className="text-xs">
+          {m.skills_tab_official()}
+        </TabsTrigger>
+        <TabsTrigger value="mine" className="text-xs">
+          {m.skills_tab_mine()}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -170,18 +161,15 @@ export function SkillsListContainer(): JSX.Element {
   const { config, loaded } = useConfig();
   useOrphanShortcutCleanup(skills, config.skills.shortcuts, loaded);
 
-  const requestDelete = useCallback((skill: Skill) => setPendingDelete(skill), []);
-  const cancelDelete = useCallback(() => setPendingDelete(null), []);
-  const confirmDelete = useCallback(() => {
+  const requestDelete = (skill: Skill) => setPendingDelete(skill);
+  const cancelDelete = () => setPendingDelete(null);
+  const confirmDelete = () => {
     if (!pendingDelete) return;
     deleteMutation.mutate(pendingDelete.id);
     setPendingDelete(null);
-  }, [pendingDelete, deleteMutation]);
+  };
 
-  const editSkill = useMemo(
-    () => findEditableSkill(search.editSkill, skills),
-    [search.editSkill, skills]
-  );
+  const editSkill = findEditableSkill(search.editSkill, skills);
 
   const setTab = (next: SkillsTab) => {
     void navigate({
@@ -208,11 +196,8 @@ export function SkillsListContainer(): JSX.Element {
     });
   };
 
-  const filtered = useMemo(() => {
-    const tabFiltered = filterByTab(skills ?? [], tab);
-    const term = searchTerm.trim().toLowerCase();
-    return tabFiltered.filter((skill) => matchesSearch(skill, term));
-  }, [skills, tab, searchTerm]);
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = filterByTab(skills ?? [], tab).filter((skill) => matchesSearch(skill, term));
 
   return (
     <div className="space-y-4">
