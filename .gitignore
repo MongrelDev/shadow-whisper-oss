@@ -63,7 +63,7 @@ test-results/
 npm-debug.log*
 pnpm-debug.log*
 
-# Vendored reference repos (git subtree)
+# Vendored reference repos (local clones, never committed)
 repos/
 
 # Wrangler
