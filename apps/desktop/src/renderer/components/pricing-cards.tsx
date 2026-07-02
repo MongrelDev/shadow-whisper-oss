@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Check, Loader2, Crown, Sparkles, Key } from "lucide-react";
+import { Check, Crown, Sparkles, Key } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { m } from "~/paraglide/messages";
 import { getLocale } from "~/paraglide/runtime";
 import { cn } from "@/lib/utils";
+import { AsyncButton } from "./ui/async-button";
 import { Button } from "./ui/button";
 import { usePlans } from "../hooks/use-plans";
 import { useCheckout } from "../hooks/use-checkout";
@@ -70,8 +71,6 @@ function getPlanFeatureLabel(featureKey: PlanFeatureKey): string {
   return FEATURE_LABEL_BY_KEY[featureKey]();
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────
-
 function RecommendedBadge(): React.ReactElement {
   return (
     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -101,19 +100,17 @@ function CheckoutButton({
   onClick: () => void;
   label: string;
 }): React.ReactElement {
-  if (isLoading) {
-    return (
-      <Button size="sm" className="w-full" disabled>
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        {m.pricing_checkout_opening()}
-      </Button>
-    );
-  }
-
   return (
-    <Button size="sm" className="w-full" onClick={onClick} disabled={disabled}>
+    <AsyncButton
+      size="sm"
+      className="w-full"
+      onClick={onClick}
+      isPending={isLoading}
+      pendingLabel={m.pricing_checkout_opening()}
+      disabled={disabled}
+    >
       {label}
-    </Button>
+    </AsyncButton>
   );
 }
 
@@ -129,6 +126,8 @@ function PeriodToggle({
   return (
     <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
       <button
+        type="button"
+        aria-pressed={!annual}
         className={cn(
           "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200",
           !annual ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
@@ -138,6 +137,8 @@ function PeriodToggle({
         {m.pricing_period_monthly()}
       </button>
       <button
+        type="button"
+        aria-pressed={annual}
         className={cn(
           "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200",
           annual ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
@@ -154,8 +155,6 @@ function PeriodToggle({
     </div>
   );
 }
-
-// ─── Card Footer (action area per plan type) ─────────────────────────
 
 function FreeCardFooter({ isCurrentPlan }: { isCurrentPlan: boolean }): React.ReactElement | null {
   if (!isCurrentPlan) return null;
@@ -221,8 +220,6 @@ function DisabledCardFooter({ label }: { label?: string }): React.ReactElement {
   );
 }
 
-// ─── CVA Variants ───────────────────────────────────────────────────
-
 type CardVariant = "default" | "hero" | "disabled";
 
 const planCardVariants = cva(
@@ -231,7 +228,7 @@ const planCardVariants = cva(
     variants: {
       variant: {
         default: "border-border bg-card hover:border-border/80",
-        hero: "border-primary bg-primary/[0.03] shadow-[0_0_0_1px_var(--primary),0_4px_24px_-4px_rgba(68,63,143,0.15)]",
+        hero: "border-primary bg-primary/[0.03] shadow-[0_0_0_1px_var(--color-primary),0_4px_24px_-4px_color-mix(in_oklch,var(--color-primary)_15%,transparent)]",
         disabled: "border-border bg-card opacity-50 pointer-events-none",
       },
     },
@@ -271,8 +268,6 @@ const priceVariants = cva("font-bold tracking-tight", {
   },
   defaultVariants: { variant: "default" },
 });
-
-// ─── PlanCard Sub-components ─────────────────────────────────────────
 
 function PlanCardHeader({
   plan,
@@ -351,8 +346,6 @@ function PlanCardFeatures({
     </ul>
   );
 }
-
-// ─── PlanCard ────────────────────────────────────────────────────────
 
 function PlanCard({
   plan,
@@ -441,12 +434,24 @@ function PlanCardFooter({
   return null;
 }
 
-// ─── PricingCards ────────────────────────────────────────────────────
-
 function PricingLoading(): React.ReactElement {
   return (
-    <div className="flex items-center justify-center py-12">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    <div aria-busy="true" className="space-y-5">
+      <span className="block h-9 w-52 animate-pulse rounded-full bg-muted" />
+      <div className="grid gap-3 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5">
+            <span className="block h-5 w-24 animate-pulse rounded bg-muted" />
+            <span className="mt-4 block h-8 w-28 animate-pulse rounded bg-muted" />
+            <div className="mt-5 space-y-2.5">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <span key={j} className="block h-3.5 w-[85%] animate-pulse rounded bg-muted/70" />
+              ))}
+            </div>
+            <span className="mt-6 block h-8 w-full animate-pulse rounded-md bg-muted" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -478,7 +483,7 @@ function PricingCardsLoaded({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 md:grid-cols-3">
         {plans.map((plan) => (
           <PlanCard
             key={plan.name}

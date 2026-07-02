@@ -94,49 +94,46 @@ export const WhisperTranscriptionServiceLive = Layer.effect(
     const installationRepo = yield* SkillInstallationRepository;
     const skillRepo = yield* SkillRepository;
 
-    const resolveWithForcedSkill = (input: TranscribeSyncInput) =>
-      Effect.gen(function* () {
-        const [installations, skillMarkdown] = yield* Effect.all(
-          [
-            installationRepo
-              .listInstalled(input.userId)
-              .pipe(Effect.catch(() => Effect.succeed([]))),
-            skillRepo.load(input.skillId).pipe(Effect.catch(() => Effect.succeed(null))),
-          ],
-          { concurrency: 2 }
-        );
+    const resolveWithForcedSkill = Effect.fnUntraced(function* (input: TranscribeSyncInput) {
+      const [installations, skillMarkdown] = yield* Effect.all(
+        [
+          installationRepo.listInstalled(input.userId).pipe(Effect.catch(() => Effect.succeed([]))),
+          skillRepo.load(input.skillId).pipe(Effect.catch(() => Effect.succeed(null))),
+        ],
+        { concurrency: 2 }
+      );
 
-        const installed = installations.find((s) => s.skillId === input.skillId);
-        if (!installed) {
-          return yield* new SkillResolutionError({ message: "Skill not installed" });
-        }
-        if (!skillMarkdown) {
-          return yield* new SkillResolutionError({ message: "Skill content not found" });
-        }
+      const installed = installations.find((s) => s.skillId === input.skillId);
+      if (!installed) {
+        return yield* new SkillResolutionError({ message: "Skill not installed" });
+      }
+      if (!skillMarkdown) {
+        return yield* new SkillResolutionError({ message: "Skill content not found" });
+      }
 
-        return {
-          _tag: "ForcedSkill" as const,
-          userId: input.userId,
-          sessionId: input.sessionId,
-          audio: input.audio,
-          contentType: input.contentType,
-          locale: input.locale,
-          skillId: input.skillId,
-          skillMarkdown,
-          timezone: input.timezone,
-          language: input.language,
-          platform: input.platform,
-          os: input.os,
-          surfaceContext: input.surfaceContext,
-        } satisfies TranscriptionInput;
-      });
+      return {
+        _tag: "ForcedSkill" as const,
+        userId: input.userId,
+        sessionId: input.sessionId,
+        audio: input.audio,
+        contentType: input.contentType,
+        locale: input.locale,
+        skillId: input.skillId,
+        skillMarkdown,
+        timezone: input.timezone,
+        language: input.language,
+        platform: input.platform,
+        os: input.os,
+        surfaceContext: input.surfaceContext,
+      } satisfies TranscriptionInput;
+    });
 
     const resolveTranscriptionMode = (input: TranscribeSyncInput) =>
       input.skillId ? resolveWithForcedSkill(input) : Effect.succeed(buildVoiceSkillsInput(input));
 
     return WhisperTranscriptionService.of({
-      transcribeSync: (input) =>
-        Effect.gen(function* () {
+      transcribeSync: Effect.fnUntraced(
+        function* (input) {
           // The sessionId is the signed warmup token; reject anything not minted for
           // this user (invalid/expired/wrong-user/wrong-purpose) before doing work.
           // This also gates the unscoped warmup-metadata KV read in the strategy.
@@ -167,7 +164,9 @@ export const WhisperTranscriptionServiceLive = Layer.effect(
             })
           );
           return buildResponse(outcome);
-        }).pipe(Effect.tapError((error) => obs.failWideEvent(error))),
+        },
+        Effect.tapError((error) => obs.failWideEvent(error))
+      ),
     });
   })
 );

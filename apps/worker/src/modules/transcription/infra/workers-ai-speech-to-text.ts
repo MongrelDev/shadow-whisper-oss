@@ -68,11 +68,10 @@ const toRecordingRequest = (
 };
 
 export const makeWorkersAiSpeechToText = (primary: TranscribeService): SpeechToTextService => ({
-  transcribeAudio: (params: SpeechToTextRequest) =>
-    Effect.gen(function* () {
-      const normalized = yield* normalizeAudioSource(params.source);
-      return yield* transcribeRecording(primary, toRecordingRequest(normalized, params));
-    }),
+  transcribeAudio: Effect.fnUntraced(function* (params: SpeechToTextRequest) {
+    const normalized = yield* normalizeAudioSource(params.source);
+    return yield* transcribeRecording(primary, toRecordingRequest(normalized, params));
+  }),
   transcribeRecording: (params) => transcribeRecording(primary, params),
 });
 

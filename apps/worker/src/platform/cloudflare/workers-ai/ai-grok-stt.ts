@@ -110,42 +110,41 @@ const mapResponse = (response: GrokSttResponse): MappedGrokResult => {
 };
 
 export const makeGrokSttClient = (env: Env): TranscribeService => ({
-  transcribe: (params) =>
-    Effect.gen(function* () {
-      const file = arrayBufferToDataUri(params.audio, params.contentType);
-      const keyterms = mergeKeyterms(params.dictionaryHints, params.keytermsPrompt);
-      const formattingLanguage = resolveFormattingLanguage(params.formattingLanguage);
+  transcribe: Effect.fnUntraced(function* (params) {
+    const file = arrayBufferToDataUri(params.audio, params.contentType);
+    const keyterms = mergeKeyterms(params.dictionaryHints, params.keytermsPrompt);
+    const formattingLanguage = resolveFormattingLanguage(params.formattingLanguage);
 
-      const [apiDuration, response] = yield* Effect.tryPromise({
-        try: () =>
-          env.AI.run(
-            GROK_STT_MODEL,
-            buildRunInput(file, formattingLanguage, keyterms),
-            buildGatewayOptions(env, params.gatewayMetadata)
-          ) as Promise<GrokSttResponse>,
-        catch: (e) => new TranscribeError({ message: `[${GROK_STT_MODEL}] ${unknownMessage(e)}` }),
-      }).pipe(Effect.timed);
+    const [apiDuration, response] = yield* Effect.tryPromise({
+      try: () =>
+        env.AI.run(
+          GROK_STT_MODEL,
+          buildRunInput(file, formattingLanguage, keyterms),
+          buildGatewayOptions(env, params.gatewayMetadata)
+        ) as Promise<GrokSttResponse>,
+      catch: (e) => new TranscribeError({ message: `[${GROK_STT_MODEL}] ${unknownMessage(e)}` }),
+    }).pipe(Effect.timed);
 
-      const { text, duration, detectedLanguage } = mapResponse(response);
+    const { text, duration, detectedLanguage } = mapResponse(response);
 
-      yield* enrichWideEvent({
-        stt: {
-          model: GROK_STT_MODEL,
-          apiMs: Duration.toMillis(apiDuration),
-          audioBytes: params.audio.byteLength,
-          contentType: params.contentType,
-          textLength: text.length,
-          keytermsCount: keyterms.length,
-          formattingLanguage: formattingLanguage ?? "none",
-          detectedLanguage,
-        },
-      });
+    yield* enrichWideEvent({
+      stt: {
+        model: GROK_STT_MODEL,
+        apiMs: Duration.toMillis(apiDuration),
+        audioBytes: params.audio.byteLength,
+        contentType: params.contentType,
+        textLength: text.length,
+        keytermsCount: keyterms.length,
+        formattingLanguage: formattingLanguage ?? "none",
+        detectedLanguage,
+      },
+    });
 
-      return {
-        engine: GROK_STT_MODEL,
-        text,
-        duration,
-        ...(detectedLanguage ? { detectedLanguage } : {}),
-      };
-    }),
+    return {
+      engine: GROK_STT_MODEL,
+      text,
+      duration,
+      ...(detectedLanguage ? { detectedLanguage } : {}),
+    };
+  }),
 });

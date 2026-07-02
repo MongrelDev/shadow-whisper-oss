@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { m } from "~/paraglide/messages";
 
 interface StepDescribeProps {
@@ -73,12 +72,15 @@ export function StepDescribe({
         </div>
       )}
 
-      <Button onClick={onGenerate} disabled={!canGenerate} className="self-end">
-        {isGenerating && <Loader2 className="mr-2 size-4 animate-spin" />}
-        {isGenerating
-          ? m.skill_builder_step_describe_generating()
-          : m.skill_builder_step_describe_generate()}
-      </Button>
+      <AsyncButton
+        onClick={onGenerate}
+        isPending={isGenerating}
+        pendingLabel={m.skill_builder_step_describe_generating()}
+        disabled={!canGenerate}
+        className="self-end"
+      >
+        {m.skill_builder_step_describe_generate()}
+      </AsyncButton>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { motion } from "motion/react";
 import { ArrowRight, CheckCircle2, Mail, RefreshCw } from "lucide-react";
 import { m } from "~/paraglide/messages";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface CheckEmailViewProps {
   email: string;
@@ -17,16 +17,6 @@ interface CheckEmailViewProps {
 
 type StatusMessage = NonNullable<CheckEmailViewProps["statusMessage"]>;
 
-const staggered = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
 export function CheckEmailView({
   email,
   resendLabel,
@@ -38,7 +28,7 @@ export function CheckEmailView({
   statusMessage,
 }: CheckEmailViewProps): React.ReactElement {
   return (
-    <motion.div variants={staggered} initial="hidden" animate="show" className="w-full space-y-8">
+    <div className="w-full space-y-8">
       <ConfirmationBeacon />
       <EmailDestination email={email} />
       <StatusNote message={statusMessage} />
@@ -53,29 +43,23 @@ export function CheckEmailView({
       <DeliveryHint />
       <PathDivider />
       <LoginShortcut email={email} />
-    </motion.div>
+    </div>
   );
 }
 
 function ConfirmationBeacon(): React.ReactElement {
   return (
-    <motion.div variants={item} className="flex justify-center">
-      <div className="relative">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 rounded-full bg-primary/20 blur-2xl"
-        />
-        <div className="flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-          <Mail className="size-6" aria-hidden="true" />
-        </div>
+    <div className="flex justify-center">
+      <div className="flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+        <Mail className="size-6" aria-hidden="true" />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 function EmailDestination({ email }: Pick<CheckEmailViewProps, "email">): React.ReactElement {
   return (
-    <motion.div variants={item} className="space-y-3 text-center">
+    <div className="space-y-3 text-center">
       <h1 className="text-3xl font-bold tracking-tight text-foreground">
         {m.auth_check_email_title()}
       </h1>
@@ -83,46 +67,29 @@ function EmailDestination({ email }: Pick<CheckEmailViewProps, "email">): React.
       <p className="font-mono text-sm text-foreground">
         {email || m.auth_check_email_fallback_address()}
       </p>
-    </motion.div>
+    </div>
   );
 }
 
 function StatusNote({ message }: { message?: StatusMessage | null }): React.ReactElement | null {
   if (!message) return null;
 
-  if (message.kind === "error") {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-      >
-        <p>{message.text}</p>
-      </motion.div>
-    );
-  }
-
-  if (message.kind === "success") {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-foreground"
-      >
-        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-        <p>{message.text}</p>
-      </motion.div>
-    );
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-foreground"
+    <div
+      role={message.kind === "error" ? "alert" : "status"}
+      className={cn(
+        "flex items-start gap-2 rounded-lg border px-4 py-3 text-sm",
+        "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-safe:duration-200",
+        message.kind === "error"
+          ? "border-destructive/20 bg-destructive/5 text-destructive"
+          : "border-primary/15 bg-primary/5 text-foreground"
+      )}
     >
+      {message.kind === "success" && (
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+      )}
       <p>{message.text}</p>
-    </motion.div>
+    </div>
   );
 }
 
@@ -138,10 +105,10 @@ function VerificationActions({
   "resendLabel" | "resendDisabled" | "onResend" | "verifyLabel" | "verifyDisabled" | "onVerify"
 >): React.ReactElement {
   return (
-    <motion.div variants={item} className="space-y-3">
+    <div className="space-y-3">
       <VerifyButton label={verifyLabel} disabled={verifyDisabled} onClick={onVerify} />
       <ResendButton label={resendLabel} disabled={resendDisabled} onClick={onResend} />
-    </motion.div>
+    </div>
   );
 }
 
@@ -188,28 +155,25 @@ function ResendButton({
 
 function DeliveryHint(): React.ReactElement {
   return (
-    <motion.div
-      variants={item}
-      className="space-y-4 rounded-lg border border-border/60 bg-muted/30 p-4 text-xs leading-[1.65] text-muted-foreground"
-    >
+    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/30 p-4 text-xs leading-[1.65] text-muted-foreground">
       <p>{m.auth_check_email_delivery_hint()}</p>
-    </motion.div>
+    </div>
   );
 }
 
 function PathDivider(): React.ReactElement {
   return (
-    <motion.div variants={item} className="flex items-center gap-4">
+    <div className="flex items-center gap-4">
       <span className="h-px flex-1 bg-border" />
       <span className="text-xs text-muted-foreground">{m.auth_divider_or()}</span>
       <span className="h-px flex-1 bg-border" />
-    </motion.div>
+    </div>
   );
 }
 
 function LoginShortcut({ email }: Pick<CheckEmailViewProps, "email">): React.ReactElement {
   return (
-    <motion.p variants={item} className="text-center text-sm text-muted-foreground">
+    <p className="text-center text-sm text-muted-foreground">
       {m.auth_check_email_login_prompt()}{" "}
       <Link
         to="/auth/login"
@@ -219,6 +183,6 @@ function LoginShortcut({ email }: Pick<CheckEmailViewProps, "email">): React.Rea
         {m.auth_check_email_login_link()}
         <ArrowRight className="size-3" aria-hidden="true" />
       </Link>
-    </motion.p>
+    </p>
   );
 }

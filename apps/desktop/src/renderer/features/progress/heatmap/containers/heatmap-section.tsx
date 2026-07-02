@@ -7,7 +7,7 @@ export function HeatmapSection() {
   if (!hydrated) return null;
 
   return (
-    <section className="@container animate-in fade-in duration-500">
+    <section className="@container motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card p-4">
         <div className="block @md:hidden">
           <HeatmapGrid />

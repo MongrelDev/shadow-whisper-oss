@@ -466,15 +466,17 @@ const BILINGUAL: AchievementRule = {
   }),
 };
 
+export const SKILL_EXPLORER_THRESHOLD = 3;
+
 const SKILL_EXPLORER: AchievementRule = {
   key: "skill_explorer",
   evaluate: (snap) =>
-    snap.distinctSkillsAllTime >= 3
+    snap.distinctSkillsAllTime >= SKILL_EXPLORER_THRESHOLD
       ? { contextJson: JSON.stringify({ distinctSkills: snap.distinctSkillsAllTime }) }
       : null,
   progress: (snap) => ({
     current: snap.distinctSkillsAllTime,
-    target: 3,
+    target: SKILL_EXPLORER_THRESHOLD,
     label: "skills",
   }),
 };

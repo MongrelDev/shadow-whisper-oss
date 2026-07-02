@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Schedule } from "effect";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { AffiliateProfileRepository } from "./ports/affiliate-profile-repository";
 import { ReferralRepository } from "./ports/referral-repository";
 import type { ReferralWithDetails } from "./ports/referral-repository";
@@ -146,22 +146,20 @@ export const AffiliateServiceLive = Layer.effect(
     const authSignup = yield* AuthSignup;
     const referralWriter = yield* ReferralWriter;
 
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
-    const checkEligibility = (userId: string) =>
-      Effect.gen(function* () {
-        const billing = yield* userReader.getBillingProfile(userId);
-        if (!billing.stripeCustomerId) {
-          yield* obs.setWideEvent({ eligibilityReason: "missing_stripe_customer" });
-          return { canParticipate: false as const, reason: "missing_stripe_customer" as const };
-        }
-        if (!billing.stripeSubscriptionId) {
-          yield* obs.setWideEvent({ eligibilityReason: "missing_active_subscription" });
-          return { canParticipate: false as const, reason: "missing_active_subscription" as const };
-        }
-        return { canParticipate: true as const, reason: null };
-      });
+    const checkEligibility = Effect.fnUntraced(function* (userId: string) {
+      const billing = yield* userReader.getBillingProfile(userId);
+      if (!billing.stripeCustomerId) {
+        yield* obs.setWideEvent({ eligibilityReason: "missing_stripe_customer" });
+        return { canParticipate: false as const, reason: "missing_stripe_customer" as const };
+      }
+      if (!billing.stripeSubscriptionId) {
+        yield* obs.setWideEvent({ eligibilityReason: "missing_active_subscription" });
+        return { canParticipate: false as const, reason: "missing_active_subscription" as const };
+      }
+      return { canParticipate: true as const, reason: null };
+    });
 
     const generateUniqueCode = Effect.gen(function* () {
       const code = generateCode();
@@ -182,194 +180,191 @@ export const AffiliateServiceLive = Layer.effect(
       )
     );
 
-    const ensureActiveAffiliateProfile = (input: SignupInput) =>
-      Effect.gen(function* () {
-        const profile = yield* profileRepo.findByCode(input.affiliateCode);
-        if (!profile || !profile.isActive) {
-          return yield* new InvalidAffiliateCodeError({ code: input.affiliateCode });
-        }
+    const ensureActiveAffiliateProfile = Effect.fnUntraced(function* (input: SignupInput) {
+      const profile = yield* profileRepo.findByCode(input.affiliateCode);
+      if (!profile || !profile.isActive) {
+        return yield* new InvalidAffiliateCodeError({ code: input.affiliateCode });
+      }
 
-        const { stripeSubscriptionId } = yield* userReader.getBillingProfile(profile.userId);
-        if (!stripeSubscriptionId) {
-          yield* profileRepo.updateActiveByUserId(profile.userId, false, nowIso());
-          return yield* new InvalidAffiliateCodeError({ code: input.affiliateCode });
-        }
+      const { stripeSubscriptionId } = yield* userReader.getBillingProfile(profile.userId);
+      if (!stripeSubscriptionId) {
+        yield* profileRepo.updateActiveByUserId(profile.userId, false, nowIso());
+        return yield* new InvalidAffiliateCodeError({ code: input.affiliateCode });
+      }
 
-        return profile;
-      });
+      return profile;
+    });
 
-    const ensureNotSelfReferral = (referrerUserId: string, inviteeEmail: string) =>
-      Effect.gen(function* () {
-        const referrerEmail = yield* userReader.getEmailByUserId(referrerUserId);
-        if (referrerEmail && referrerEmail.toLowerCase() === inviteeEmail) {
-          return yield* new SelfReferralError({ userId: referrerUserId });
-        }
-      });
+    const ensureNotSelfReferral = Effect.fnUntraced(function* (
+      referrerUserId: string,
+      inviteeEmail: string
+    ) {
+      const referrerEmail = yield* userReader.getEmailByUserId(referrerUserId);
+      if (referrerEmail && referrerEmail.toLowerCase() === inviteeEmail) {
+        return yield* new SelfReferralError({ userId: referrerUserId });
+      }
+    });
 
-    const ensureNoExistingUser = (email: string) =>
-      Effect.gen(function* () {
-        const existingUserId = yield* userReader.getUserIdByEmail(email);
-        if (existingUserId) {
-          return yield* new EmailAlreadyExistsError({ email });
-        }
-      });
+    const ensureNoExistingUser = Effect.fnUntraced(function* (email: string) {
+      const existingUserId = yield* userReader.getUserIdByEmail(email);
+      if (existingUserId) {
+        return yield* new EmailAlreadyExistsError({ email });
+      }
+    });
 
     return AffiliateService.of({
-      getDashboard: ({ userId }) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({ "affiliate.operation": "dashboard" });
+      getDashboard: Effect.fnUntraced(function* ({ userId }: { userId: string }) {
+        yield* obs.setWideEvent({ "affiliate.operation": "dashboard" });
 
-          const eligibility = yield* checkEligibility(userId);
-          if (!eligibility.canParticipate) {
-            return {
-              ...EMPTY_DASHBOARD,
-              profile: { ...EMPTY_DASHBOARD.profile, eligibility },
-            } satisfies AffiliateDashboard;
-          }
-
-          const profile = yield* profileRepo.findByUserId(userId);
-          if (!profile) {
-            yield* obs.setWideEvent({ profileExists: false });
-            return EMPTY_DASHBOARD;
-          }
-
-          yield* obs.setWideEvent({ profileExists: true, affiliateCodePresent: true });
-
-          const [referrals, rewards] = yield* Effect.all(
-            [
-              referralRepo.findByReferrerUserIdWithDetails(userId, { limit: DEFAULT_LIST_LIMIT }),
-              rewardRepo.findByUserId(userId, { limit: DEFAULT_LIST_LIMIT }),
-            ],
-            { concurrency: "unbounded" }
-          );
-
-          const grantedStatuses = new Set<RewardStatus>(["granted", "consumed"]);
-          const grantedRewardDays =
-            rewards.filter((r) => grantedStatuses.has(r.status)).length * REWARD_DAYS;
-
-          yield* obs.setWideEvent({
-            totalReferrals: referrals.length,
-            rewardCount: rewards.length,
-            grantedRewardDays,
-          });
-
+        const eligibility = yield* checkEligibility(userId);
+        if (!eligibility.canParticipate) {
           return {
-            profile: toProfileDto(profile),
-            stats: {
-              totalReferrals: referrals.length,
-              grantedRewardDays,
-            },
-            referrals,
+            ...EMPTY_DASHBOARD,
+            profile: { ...EMPTY_DASHBOARD.profile, eligibility },
           } satisfies AffiliateDashboard;
-        }).pipe(captureError),
+        }
 
-      getOrCreateProfile: ({ userId }) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({ "affiliate.operation": "profile" });
+        const profile = yield* profileRepo.findByUserId(userId);
+        if (!profile) {
+          yield* obs.setWideEvent({ profileExists: false });
+          return EMPTY_DASHBOARD;
+        }
 
-          const eligibility = yield* checkEligibility(userId);
-          if (!eligibility.canParticipate) {
-            return ineligibleProfileDto(eligibility.reason);
-          }
+        yield* obs.setWideEvent({ profileExists: true, affiliateCodePresent: true });
 
-          const existing = yield* profileRepo.findByUserId(userId);
-          if (existing) {
-            yield* obs.setWideEvent({ profileExists: true, affiliateCodePresent: true });
-            return toProfileDto(existing);
-          }
+        const [referrals, rewards] = yield* Effect.all(
+          [
+            referralRepo.findByReferrerUserIdWithDetails(userId, { limit: DEFAULT_LIST_LIMIT }),
+            rewardRepo.findByUserId(userId, { limit: DEFAULT_LIST_LIMIT }),
+          ],
+          { concurrency: "unbounded" }
+        );
 
-          const code = yield* generateUniqueCode;
-          const profile = yield* profileRepo.create({ userId, code, isActive: true });
-          yield* obs.setWideEvent({
-            profileExists: false,
-            profileCreated: true,
-            affiliateCodePresent: true,
-          });
-          return toProfileDto(profile);
-        }).pipe(captureError),
+        const grantedStatuses = new Set<RewardStatus>(["granted", "consumed"]);
+        const grantedRewardDays =
+          rewards.filter((r) => grantedStatuses.has(r.status)).length * REWARD_DAYS;
 
-      processSignup: (input) =>
-        Effect.gen(function* () {
-          const inviteeEmail = resolveInviteeEmail(input.email);
+        yield* obs.setWideEvent({
+          totalReferrals: referrals.length,
+          rewardCount: rewards.length,
+          grantedRewardDays,
+        });
 
-          yield* obs.setWideEvent({
-            "affiliate.operation": "signup",
-            referralCodePresent: input.affiliateCode.length > 0,
-          });
+        return {
+          profile: toProfileDto(profile),
+          stats: {
+            totalReferrals: referrals.length,
+            grantedRewardDays,
+          },
+          referrals,
+        } satisfies AffiliateDashboard;
+      }, captureError),
 
-          const profile = yield* ensureActiveAffiliateProfile(input).pipe(
-            Effect.tapError((error) =>
-              error._tag === "InvalidAffiliateCodeError"
-                ? obs.setWideEvent({ denyReason: "invalid_affiliate_code" })
-                : Effect.void
-            )
-          );
+      getOrCreateProfile: Effect.fnUntraced(function* ({ userId }: { userId: string }) {
+        yield* obs.setWideEvent({ "affiliate.operation": "profile" });
 
-          yield* obs.setWideEvent({ referrerUserId: profile.userId });
+        const eligibility = yield* checkEligibility(userId);
+        if (!eligibility.canParticipate) {
+          return ineligibleProfileDto(eligibility.reason);
+        }
 
-          yield* ensureNotSelfReferral(profile.userId, inviteeEmail).pipe(
-            Effect.tapError((error) =>
-              error._tag === "SelfReferralError"
-                ? obs.setWideEvent({ denyReason: "self_referral" })
-                : Effect.void
-            )
-          );
+        const existing = yield* profileRepo.findByUserId(userId);
+        if (existing) {
+          yield* obs.setWideEvent({ profileExists: true, affiliateCodePresent: true });
+          return toProfileDto(existing);
+        }
 
-          yield* ensureNoExistingUser(inviteeEmail).pipe(
-            Effect.tapError((error) =>
-              error._tag === "EmailAlreadyExistsError"
-                ? obs.setWideEvent({ denyReason: "email_already_exists" })
-                : Effect.void
-            )
-          );
+        const code = yield* generateUniqueCode;
+        const profile = yield* profileRepo.create({ userId, code, isActive: true });
+        yield* obs.setWideEvent({
+          profileExists: false,
+          profileCreated: true,
+          affiliateCodePresent: true,
+        });
+        return toProfileDto(profile);
+      }, captureError),
 
-          const userId = yield* authSignup
-            .signUpEmail({
-              name: input.name,
-              email: input.email,
-              password: input.password,
-              callbackURL: input.callbackURL,
-            })
-            .pipe(Effect.map((result) => result.userId));
+      processSignup: Effect.fnUntraced(function* (input: SignupInput) {
+        const inviteeEmail = resolveInviteeEmail(input.email);
 
-          const existingReferral = yield* referralRepo.findByReferredUserId(userId);
-          if (existingReferral) {
-            yield* obs.setWideEvent({
-              createdUserId: userId,
-              referralAlreadyExists: true,
-              trialDays: AFFILIATE_TRIAL_DAYS,
-            });
-            return { userId, trialDays: AFFILIATE_TRIAL_DAYS } satisfies SignupOutput;
-          }
+        yield* obs.setWideEvent({
+          "affiliate.operation": "signup",
+          referralCodePresent: input.affiliateCode.length > 0,
+        });
 
-          yield* referralWriter
-            .createReferral({
-              referral: {
-                referrerUserId: profile.userId,
-                referredUserId: userId,
-                affiliateCode: input.affiliateCode,
-                source: "web_link",
-                status: "pending",
-                benefitType: "extended_trial",
-                benefitStartedAt: null,
-                benefitEndsAt: null,
-              },
-            })
-            .pipe(
-              Effect.retry({
-                schedule: retryPolicy,
-                while: (e) => e._tag === "AffiliateDatabaseError",
-              })
-            );
+        const profile = yield* ensureActiveAffiliateProfile(input).pipe(
+          Effect.tapError((error) =>
+            error._tag === "InvalidAffiliateCodeError"
+              ? obs.setWideEvent({ denyReason: "invalid_affiliate_code" })
+              : Effect.void
+          )
+        );
 
+        yield* obs.setWideEvent({ referrerUserId: profile.userId });
+
+        yield* ensureNotSelfReferral(profile.userId, inviteeEmail).pipe(
+          Effect.tapError((error) =>
+            error._tag === "SelfReferralError"
+              ? obs.setWideEvent({ denyReason: "self_referral" })
+              : Effect.void
+          )
+        );
+
+        yield* ensureNoExistingUser(inviteeEmail).pipe(
+          Effect.tapError((error) =>
+            error._tag === "EmailAlreadyExistsError"
+              ? obs.setWideEvent({ denyReason: "email_already_exists" })
+              : Effect.void
+          )
+        );
+
+        const userId = yield* authSignup
+          .signUpEmail({
+            name: input.name,
+            email: input.email,
+            password: input.password,
+            callbackURL: input.callbackURL,
+          })
+          .pipe(Effect.map((result) => result.userId));
+
+        const existingReferral = yield* referralRepo.findByReferredUserId(userId);
+        if (existingReferral) {
           yield* obs.setWideEvent({
             createdUserId: userId,
-            referralCreated: true,
+            referralAlreadyExists: true,
             trialDays: AFFILIATE_TRIAL_DAYS,
           });
-
           return { userId, trialDays: AFFILIATE_TRIAL_DAYS } satisfies SignupOutput;
-        }).pipe(captureError),
+        }
+
+        yield* referralWriter
+          .createReferral({
+            referral: {
+              referrerUserId: profile.userId,
+              referredUserId: userId,
+              affiliateCode: input.affiliateCode,
+              source: "web_link",
+              status: "pending",
+              benefitType: "extended_trial",
+              benefitStartedAt: null,
+              benefitEndsAt: null,
+            },
+          })
+          .pipe(
+            Effect.retry({
+              schedule: retryPolicy,
+              while: (e) => e._tag === "AffiliateDatabaseError",
+            })
+          );
+
+        yield* obs.setWideEvent({
+          createdUserId: userId,
+          referralCreated: true,
+          trialDays: AFFILIATE_TRIAL_DAYS,
+        });
+
+        return { userId, trialDays: AFFILIATE_TRIAL_DAYS } satisfies SignupOutput;
+      }, captureError),
     });
   })
 );

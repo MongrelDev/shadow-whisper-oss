@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { m } from "~/paraglide/messages";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,16 +68,14 @@ export function AddWordModal({
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={adding}>
             {m.dictionary_button_cancel()}
           </Button>
-          <Button onClick={handleSubmit} disabled={!value.trim() || adding}>
-            {adding ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {m.dictionary_button_adding()}
-              </>
-            ) : (
-              m.dictionary_button_confirm_add()
-            )}
-          </Button>
+          <AsyncButton
+            onClick={handleSubmit}
+            isPending={adding}
+            pendingLabel={m.dictionary_button_adding()}
+            disabled={!value.trim()}
+          >
+            {m.dictionary_button_confirm_add()}
+          </AsyncButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

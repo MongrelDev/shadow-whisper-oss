@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 import { EvlogError, parseError } from "evlog";
 import type { AppType as ApiContractType, ErrorResponse } from "@whisper/api";
 import { emitOneShotWideEvent } from "./observability/emit-one-shot-wide-event";
@@ -88,7 +88,8 @@ app.onError((err, c) => {
   const parsed = parseError(err);
   const status = resolveErrorStatus(parsed);
 
-  Effect.runSync(
+  // Best-effort: a failed emission must never mask the error response.
+  const emitExit = Effect.runSyncExit(
     emitOneShotWideEvent(
       c.env,
       "http.unhandled_error",
@@ -96,6 +97,9 @@ app.onError((err, c) => {
       { outcome: "failure", error: err, responseStatus: status }
     )
   );
+  if (Exit.isFailure(emitExit)) {
+    Effect.runFork(Effect.logError("http.unhandled_error emission failed", emitExit.cause));
+  }
 
   const details = buildErrorDetails(parsed, err instanceof EvlogError);
   const body: ErrorResponse<"er_internal"> = { error_code: "er_internal", details };

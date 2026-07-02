@@ -54,56 +54,55 @@ interface AssemblyAiResponse {
 }
 
 export const makeAssemblyAiClient = (env: Env): TranscribeService => ({
-  transcribe: (params) =>
-    Effect.gen(function* () {
-      const dataUri = arrayBufferToDataUri(params.audio, params.contentType);
-      const input = buildAssemblyAiInput(params);
+  transcribe: Effect.fnUntraced(function* (params) {
+    const dataUri = arrayBufferToDataUri(params.audio, params.contentType);
+    const input = buildAssemblyAiInput(params);
 
-      const [apiDuration, response] = yield* Effect.tryPromise({
-        try: () =>
-          env.AI.run(
-            ASSEMBLYAI_MODEL,
-            { audio_url: dataUri, ...input } as Parameters<Env["AI"]["run"]>[1],
-            {
-              gateway: {
-                id: env.AI_GATEWAY_ID,
-                ...(params.gatewayMetadata
-                  ? { metadata: { ...params.gatewayMetadata, model: ASSEMBLYAI_MODEL } }
-                  : {}),
-              },
-            }
-          ) as Promise<AssemblyAiResponse>,
-        catch: (e) => new TranscribeError({ message: unknownMessage(e) }),
-      }).pipe(Effect.timed);
+    const [apiDuration, response] = yield* Effect.tryPromise({
+      try: () =>
+        env.AI.run(
+          ASSEMBLYAI_MODEL,
+          { audio_url: dataUri, ...input } as Parameters<Env["AI"]["run"]>[1],
+          {
+            gateway: {
+              id: env.AI_GATEWAY_ID,
+              ...(params.gatewayMetadata
+                ? { metadata: { ...params.gatewayMetadata, model: ASSEMBLYAI_MODEL } }
+                : {}),
+            },
+          }
+        ) as Promise<AssemblyAiResponse>,
+      catch: (e) => new TranscribeError({ message: unknownMessage(e) }),
+    }).pipe(Effect.timed);
 
-      const apiMs = Duration.toMillis(apiDuration);
-      const result = response.result;
-      if (!result) {
-        return yield* new TranscribeError({ message: "No result from AssemblyAI" });
-      }
+    const apiMs = Duration.toMillis(apiDuration);
+    const result = response.result;
+    if (!result) {
+      return yield* new TranscribeError({ message: "No result from AssemblyAI" });
+    }
 
-      const text = result.text;
-      const duration = extractDuration(result);
-      const detectedLanguage = extractDetectedLanguage(result);
-      const keyterms = mergeKeyterms(params.dictionaryHints, params.keytermsPrompt);
+    const text = result.text;
+    const duration = extractDuration(result);
+    const detectedLanguage = extractDetectedLanguage(result);
+    const keyterms = mergeKeyterms(params.dictionaryHints, params.keytermsPrompt);
 
-      yield* enrichWideEvent({
-        stt: {
-          model: ASSEMBLYAI_MODEL,
-          apiMs,
-          audioBytes: params.audio.byteLength,
-          textLength: text.length,
-          keytermsCount: keyterms.length,
-          language: params.language,
-          detectedLanguage,
-        },
-      });
+    yield* enrichWideEvent({
+      stt: {
+        model: ASSEMBLYAI_MODEL,
+        apiMs,
+        audioBytes: params.audio.byteLength,
+        textLength: text.length,
+        keytermsCount: keyterms.length,
+        language: params.language,
+        detectedLanguage,
+      },
+    });
 
-      return {
-        engine: ASSEMBLYAI_MODEL,
-        text,
-        duration,
-        ...(detectedLanguage ? { detectedLanguage } : {}),
-      };
-    }),
+    return {
+      engine: ASSEMBLYAI_MODEL,
+      text,
+      duration,
+      ...(detectedLanguage ? { detectedLanguage } : {}),
+    };
+  }),
 });

@@ -91,31 +91,30 @@ export const makeGroqTextGenerator = (
       },
     });
 
-  const runToolCall = (
+  const runToolCall = Effect.fnUntraced(function* (
     call: ChatCompletionMessageToolCall,
     operations: readonly TranscriptOperation[],
     installed: InstalledSkillSummary[]
-  ) =>
-    Effect.gen(function* () {
-      const id = parseId(call.function.arguments);
-      const loaded = id
-        ? yield* resolveSelection(id, { operations, installed, skillLoader })
-        : { skillMarkdown: null, skillName: null };
+  ) {
+    const id = parseId(call.function.arguments);
+    const loaded = id
+      ? yield* resolveSelection(id, { operations, installed, skillLoader })
+      : { skillMarkdown: null, skillName: null };
 
-      yield* Effect.logInfo("Groq applied operation", {
-        model: GROQ_LLM_MODEL,
-        id,
-        skillName: loaded.skillName,
-        loaded: loaded.skillMarkdown !== null,
-      });
-
-      return {
-        role: "tool" as const,
-        tool_call_id: call.id,
-        // @effect-diagnostics-next-line preferSchemaOverJson:off
-        content: JSON.stringify(loaded),
-      } satisfies ChatCompletionMessageParam;
+    yield* Effect.logInfo("Groq applied operation", {
+      model: GROQ_LLM_MODEL,
+      id,
+      skillName: loaded.skillName,
+      loaded: loaded.skillMarkdown !== null,
     });
+
+    return {
+      role: "tool" as const,
+      tool_call_id: call.id,
+      // @effect-diagnostics-next-line preferSchemaOverJson:off
+      content: JSON.stringify(loaded),
+    } satisfies ChatCompletionMessageParam;
+  });
 
   const warnIfTruncated = (choice: ChatCompletion["choices"][number] | undefined) =>
     choice?.finish_reason === "length"
@@ -126,35 +125,34 @@ export const makeGroqTextGenerator = (
       : Effect.void;
 
   // Second (final) turn with the tool results — mirrors AI SDK stepCountIs(2).
-  const runToolTurn = (
+  const runToolTurn = Effect.fnUntraced(function* (
     messages: ChatCompletionMessageParam[],
     choice: ChatCompletion["choices"][number],
     toolCalls: ChatCompletionMessageToolCall[],
     operations: readonly TranscriptOperation[],
     installed: InstalledSkillSummary[],
     userId: string
-  ) =>
-    Effect.gen(function* () {
-      const toolMessages = yield* Effect.forEach(toolCalls, (call) =>
-        runToolCall(call, operations, installed)
-      );
-      const second = yield* callGroq(
-        [
-          ...messages,
-          { role: "assistant", content: choice.message.content, tool_calls: toolCalls },
-          ...toolMessages,
-        ],
-        true,
-        userId
-      );
-      const finalChoice = second.choices[0];
-      yield* warnIfTruncated(finalChoice);
-      return content(finalChoice?.message);
-    });
+  ) {
+    const toolMessages = yield* Effect.forEach(toolCalls, (call) =>
+      runToolCall(call, operations, installed)
+    );
+    const second = yield* callGroq(
+      [
+        ...messages,
+        { role: "assistant", content: choice.message.content, tool_calls: toolCalls },
+        ...toolMessages,
+      ],
+      true,
+      userId
+    );
+    const finalChoice = second.choices[0];
+    yield* warnIfTruncated(finalChoice);
+    return content(finalChoice?.message);
+  });
 
   return {
-    generate: (req: GenerateTextRequest) =>
-      Effect.gen(function* () {
+    generate: Effect.fnUntraced(
+      function* (req: GenerateTextRequest) {
         const { operations, installed, withTools, messages } = prepare(req);
 
         const first = yield* callGroq(messages, withTools, req.userId);
@@ -172,15 +170,15 @@ export const makeGroqTextGenerator = (
         }
 
         return yield* runToolTurn(messages, choice, toolCalls, operations, installed, req.userId);
-      }).pipe(
-        withRequestTimeout(
-          () =>
-            new TextImproverError({
-              message: `[${GROQ_LLM_MODEL}] request timed out after ${REQUEST_TIMEOUT_MS}ms`,
-              retryable: true,
-            })
-        )
-      ),
+      },
+      withRequestTimeout(
+        () =>
+          new TextImproverError({
+            message: `[${GROQ_LLM_MODEL}] request timed out after ${REQUEST_TIMEOUT_MS}ms`,
+            retryable: true,
+          })
+      )
+    ),
   };
 };
 

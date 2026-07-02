@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 import type { Context, MiddlewareHandler } from "hono";
 import type { ErrorResponse } from "@whisper/api";
 import { checkRateLimit, type RateLimitBindingName } from "../lib/rate-limit";
@@ -29,7 +29,8 @@ export function rateLimit(
 
     const success = await checkRateLimit(c.env, binding, key);
     if (!success) {
-      Effect.runSync(
+      // Best-effort: a failed emission must never mask the 429 response.
+      const emitExit = Effect.runSyncExit(
         emitOneShotWideEvent(
           c.env,
           "rate_limit.exceeded",
@@ -37,6 +38,9 @@ export function rateLimit(
           { responseStatus: 429 }
         )
       );
+      if (Exit.isFailure(emitExit)) {
+        Effect.runFork(Effect.logError("rate_limit.exceeded emission failed", emitExit.cause));
+      }
       return c.json(rateLimitedJson(key), 429);
     }
 

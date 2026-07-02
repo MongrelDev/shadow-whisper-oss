@@ -30,7 +30,7 @@ export function HomeTopbar({
       <div className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border/60 bg-card px-2.5">
         <span
           aria-hidden="true"
-          className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_color-mix(in_oklch,#10b981_18%,transparent)]"
+          className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-emerald-500)_18%,transparent)]"
         />
         <span className="text-xs font-medium text-muted-foreground">
           {m.home_topbar_status_synced()}

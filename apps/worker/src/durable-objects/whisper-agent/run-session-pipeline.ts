@@ -78,104 +78,103 @@ const buildImproveParams = (
     : { mode: "voice-skills", ...base };
 };
 
-export const runSessionPipeline = (input: RunSessionPipelineInput) =>
-  Effect.gen(function* () {
-    const obs = yield* Observability;
-    const stt = yield* SpeechToText;
-    const textImprover = yield* TextImprover;
-    const dictionaryRepository = yield* DictionaryRepository;
+export const runSessionPipeline = Effect.fnUntraced(function* (input: RunSessionPipelineInput) {
+  const obs = yield* Observability;
+  const stt = yield* SpeechToText;
+  const textImprover = yield* TextImprover;
+  const dictionaryRepository = yield* DictionaryRepository;
 
-    const transcriptionId = crypto.randomUUID();
+  const transcriptionId = crypto.randomUUID();
 
-    const dictionaryHints =
-      input.prefetchedDictionaryHints ??
-      (yield* dictionaryRepository.getDictionary(input.userId).pipe(
-        Effect.map((d) => d.words.map((w) => w.word)),
-        Effect.catch(() => Effect.succeed([] as string[])),
-        Effect.withSpan("do.dictionary-lookup")
-      ));
+  const dictionaryHints =
+    input.prefetchedDictionaryHints ??
+    (yield* dictionaryRepository.getDictionary(input.userId).pipe(
+      Effect.map((d) => d.words.map((w) => w.word)),
+      Effect.catch(() => Effect.succeed([] as string[])),
+      Effect.withSpan("do.dictionary-lookup")
+    ));
 
-    yield* obs.setWideEvent({
-      "session.operation": "agent_run_session",
-      "session.mode": input.forcedSkillMarkdown ? "ForcedSkill" : "VoiceSkills",
-      sessionId: input.sessionId,
-      transcriptionId,
-      locale: input.locale,
-      audioBytes: input.audio.byteLength,
-      contentType: input.contentType,
-      dictionaryHintsCount: dictionaryHints.length,
-      hasBundleId: input.meta.bundleId !== null,
-      bundleId: input.meta.bundleId,
-      hasSiteHost: input.meta.siteHost !== null,
-      siteHost: input.meta.siteHost,
-    });
-
-    const [sttWallDuration, sttResult] = yield* stt
-      .transcribeAudio(buildTranscribeRequest(input, dictionaryHints))
-      .pipe(
-        Effect.mapError((e) => new TranscriptionFailedError({ message: e.message })),
-        Effect.tapError((error) => obs.failWideEvent(error)),
-        Effect.withSpan("do.stt", {
-          attributes: {
-            "audio.contentType": input.contentType,
-            "audio.bytes": input.audio.byteLength,
-            "session.locale": input.locale,
-          },
-        }),
-        Effect.timed
-      );
-
-    yield* obs.setWideEvent({
-      sttCompleted: true,
-      sttEngine: sttResult.engine,
-      rawTextLength: sttResult.textLength,
-      wordCount: sttResult.wordCount,
-      audioDurationMs: sttResult.durationMs,
-      sttWallMs: Duration.toMillis(sttWallDuration),
-      detectedLanguage: sttResult.detectedLanguage ?? null,
-    });
-
-    const [llmWallDuration, improvedText] = yield* textImprover
-      .improve(buildImproveParams(input, sttResult.text, sttResult.detectedLanguage ?? null))
-      .pipe(
-        Effect.mapError((e) => new TranscriptionFailedError({ message: e.message })),
-        Effect.withSpan("do.llm-improve", {
-          attributes: {
-            "session.mode": input.forcedSkillMarkdown ? "ForcedSkill" : "VoiceSkills",
-            "input.length": sttResult.text.length,
-          },
-        }),
-        Effect.timed,
-        Effect.tapError((e) => obs.failWideEvent(e))
-      );
-
-    yield* obs.setWideEvent({ llmWallMs: Duration.toMillis(llmWallDuration) });
-
-    const wordCount = countWords(sttResult.text);
-
-    const usageDraft: UsageEntry = {
-      id: transcriptionId,
-      wordCount,
-      inputWordCount: wordCount,
-      bundleId: input.meta.bundleId,
-      siteHost: input.meta.siteHost,
-      surfaceContext: input.surfaceContext,
-      engines: { stt: sttResult.engine, llm: null },
-      durationMs: sttResult.durationMs,
-      createdAt: Date.now(),
-      platform: input.platform,
-      os: input.os,
-      language: languageForUsageStat(sttResult.detectedLanguage, wordCount, sttResult.durationMs),
-      timezone: input.timezone,
-    };
-
-    yield* obs.setWideEvent({ agentRunSessionCompleted: true });
-
-    return {
-      rawText: sttResult.text,
-      improvedText,
-      sttEngine: sttResult.engine,
-      durationMs: sttResult.durationMs,
-      usageDraft,
-    } satisfies RunSessionPipelineOutput;
+  yield* obs.setWideEvent({
+    "session.operation": "agent_run_session",
+    "session.mode": input.forcedSkillMarkdown ? "ForcedSkill" : "VoiceSkills",
+    sessionId: input.sessionId,
+    transcriptionId,
+    locale: input.locale,
+    audioBytes: input.audio.byteLength,
+    contentType: input.contentType,
+    dictionaryHintsCount: dictionaryHints.length,
+    hasBundleId: input.meta.bundleId !== null,
+    bundleId: input.meta.bundleId,
+    hasSiteHost: input.meta.siteHost !== null,
+    siteHost: input.meta.siteHost,
   });
+
+  const [sttWallDuration, sttResult] = yield* stt
+    .transcribeAudio(buildTranscribeRequest(input, dictionaryHints))
+    .pipe(
+      Effect.mapError((e) => new TranscriptionFailedError({ message: e.message })),
+      Effect.tapError((error) => obs.failWideEvent(error)),
+      Effect.withSpan("do.stt", {
+        attributes: {
+          "audio.contentType": input.contentType,
+          "audio.bytes": input.audio.byteLength,
+          "session.locale": input.locale,
+        },
+      }),
+      Effect.timed
+    );
+
+  yield* obs.setWideEvent({
+    sttCompleted: true,
+    sttEngine: sttResult.engine,
+    rawTextLength: sttResult.textLength,
+    wordCount: sttResult.wordCount,
+    audioDurationMs: sttResult.durationMs,
+    sttWallMs: Duration.toMillis(sttWallDuration),
+    detectedLanguage: sttResult.detectedLanguage ?? null,
+  });
+
+  const [llmWallDuration, improvedText] = yield* textImprover
+    .improve(buildImproveParams(input, sttResult.text, sttResult.detectedLanguage ?? null))
+    .pipe(
+      Effect.mapError((e) => new TranscriptionFailedError({ message: e.message })),
+      Effect.withSpan("do.llm-improve", {
+        attributes: {
+          "session.mode": input.forcedSkillMarkdown ? "ForcedSkill" : "VoiceSkills",
+          "input.length": sttResult.text.length,
+        },
+      }),
+      Effect.timed,
+      Effect.tapError((e) => obs.failWideEvent(e))
+    );
+
+  yield* obs.setWideEvent({ llmWallMs: Duration.toMillis(llmWallDuration) });
+
+  const wordCount = countWords(sttResult.text);
+
+  const usageDraft: UsageEntry = {
+    id: transcriptionId,
+    wordCount,
+    inputWordCount: wordCount,
+    bundleId: input.meta.bundleId,
+    siteHost: input.meta.siteHost,
+    surfaceContext: input.surfaceContext,
+    engines: { stt: sttResult.engine, llm: null },
+    durationMs: sttResult.durationMs,
+    createdAt: Date.now(),
+    platform: input.platform,
+    os: input.os,
+    language: languageForUsageStat(sttResult.detectedLanguage, wordCount, sttResult.durationMs),
+    timezone: input.timezone,
+  };
+
+  yield* obs.setWideEvent({ agentRunSessionCompleted: true });
+
+  return {
+    rawText: sttResult.text,
+    improvedText,
+    sttEngine: sttResult.engine,
+    durationMs: sttResult.durationMs,
+    usageDraft,
+  } satisfies RunSessionPipelineOutput;
+});

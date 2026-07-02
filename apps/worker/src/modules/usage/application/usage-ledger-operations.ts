@@ -4,6 +4,7 @@ import {
   ACHIEVEMENT_RULES,
   BILINGUAL_MIN_WORDS_PER_LANGUAGE,
   MILESTONE_KEYS,
+  SKILL_EXPLORER_THRESHOLD,
   computeLocalDateHour,
   computeStreak,
   computeWpm,
@@ -109,17 +110,21 @@ const computeCoreStats = (
   };
 };
 
-export const getWeeklyWordCount = (weekStartMs: number, weekEndMs: number) =>
-  Effect.gen(function* () {
-    const stats = yield* StatsReader;
-    return yield* stats.weeklyWordCount(weekStartMs, weekEndMs);
-  });
+export const getWeeklyWordCount = Effect.fnUntraced(function* (
+  weekStartMs: number,
+  weekEndMs: number
+) {
+  const stats = yield* StatsReader;
+  return yield* stats.weeklyWordCount(weekStartMs, weekEndMs);
+});
 
-export const getDailyBreakdown = (fromLocalDate: string, toLocalDate: string) =>
-  Effect.gen(function* () {
-    const stats = yield* StatsReader;
-    return yield* stats.dailyBreakdown(fromLocalDate, toLocalDate);
-  });
+export const getDailyBreakdown = Effect.fnUntraced(function* (
+  fromLocalDate: string,
+  toLocalDate: string
+) {
+  const stats = yield* StatsReader;
+  return yield* stats.dailyBreakdown(fromLocalDate, toLocalDate);
+});
 
 export const getUserStats = Effect.gen(function* () {
   const stats = yield* StatsReader;
@@ -153,49 +158,48 @@ export const getMilestonesWithProgress = Effect.gen(function* () {
   });
 });
 
-const buildProgressSnapshot = (todayUtc: string) =>
-  Effect.gen(function* () {
-    const entries = yield* SnapshotReader;
-    const variety = yield* AppVarietyStore;
-    const [
-      successEntryCount,
-      recentDays,
-      todayWordCountUtc,
-      bestSessionWordsAllTime,
-      distinctAppsToday,
+const buildProgressSnapshot = Effect.fnUntraced(function* (todayUtc: string) {
+  const entries = yield* SnapshotReader;
+  const variety = yield* AppVarietyStore;
+  const [
+    successEntryCount,
+    recentDays,
+    todayWordCountUtc,
+    bestSessionWordsAllTime,
+    distinctAppsToday,
+    languageWordTotals,
+    distinctSkillsAllTime,
+    distinctPlatformsToday,
+  ] = yield* Effect.all(
+    [
+      entries.countSuccess(),
+      entries.recentActiveDaysDescUtc(STREAK_DAYS_LOOKBACK),
+      entries.sumTodayWordCountUtc(todayUtc),
+      entries.maxWordCountAllTime(),
+      variety.countDistinctToday(todayUtc),
+      entries.languageWordTotalsAllTime(),
+      entries.distinctSkillsAllTime(),
+      entries.distinctPlatformsToday(todayUtc),
+    ],
+    { concurrency: "unbounded" }
+  );
+  const currentStreak = computeStreak(recentDays, todayUtc);
+  const snap: ProgressSnapshot & { readonly todayUtc: string } = {
+    todayUtc,
+    successEntryCount,
+    currentStreak,
+    todayWordCountUtc,
+    bestSessionWordsAllTime,
+    distinctAppsToday,
+    qualifyingLanguagesAllTime: countQualifyingLanguages(
       languageWordTotals,
-      distinctSkillsAllTime,
-      distinctPlatformsToday,
-    ] = yield* Effect.all(
-      [
-        entries.countSuccess(),
-        entries.recentActiveDaysDescUtc(STREAK_DAYS_LOOKBACK),
-        entries.sumTodayWordCountUtc(todayUtc),
-        entries.maxWordCountAllTime(),
-        variety.countDistinctToday(todayUtc),
-        entries.languageWordTotalsAllTime(),
-        entries.distinctSkillsAllTime(),
-        entries.distinctPlatformsToday(todayUtc),
-      ],
-      { concurrency: "unbounded" }
-    );
-    const currentStreak = computeStreak(recentDays, todayUtc);
-    const snap: ProgressSnapshot & { readonly todayUtc: string } = {
-      todayUtc,
-      successEntryCount,
-      currentStreak,
-      todayWordCountUtc,
-      bestSessionWordsAllTime,
-      distinctAppsToday,
-      qualifyingLanguagesAllTime: countQualifyingLanguages(
-        languageWordTotals,
-        BILINGUAL_MIN_WORDS_PER_LANGUAGE
-      ),
-      distinctSkillsAllTime,
-      distinctPlatformsToday,
-    };
-    return snap;
-  });
+      BILINGUAL_MIN_WORDS_PER_LANGUAGE
+    ),
+    distinctSkillsAllTime,
+    distinctPlatformsToday,
+  };
+  return snap;
+});
 
 export const getAchievementsWithProgress = Effect.gen(function* () {
   const store = yield* BadgeStore;
@@ -219,19 +223,18 @@ export const getAchievementsWithProgress = Effect.gen(function* () {
   });
 });
 
-export const appendSkillUsage = (row: SkillUsageRow) =>
-  Effect.gen(function* () {
-    const writer = yield* EntryWriter;
-    yield* writer.appendSkillUsage(row);
+export const appendSkillUsage = Effect.fnUntraced(function* (row: SkillUsageRow) {
+  const writer = yield* EntryWriter;
+  yield* writer.appendSkillUsage(row);
 
-    const reader = yield* SnapshotReader;
-    const distinctSkills = yield* reader.distinctSkillsAllTime();
-    if (distinctSkills >= 3) {
-      const badges = yield* BadgeStore;
-      // @effect-diagnostics-next-line preferSchemaOverJson:off
-      yield* badges.tryAward("skill_explorer", row.createdAt, JSON.stringify({ distinctSkills }));
-    }
-  });
+  const reader = yield* SnapshotReader;
+  const distinctSkills = yield* reader.distinctSkillsAllTime();
+  if (distinctSkills >= SKILL_EXPLORER_THRESHOLD) {
+    const badges = yield* BadgeStore;
+    // @effect-diagnostics-next-line preferSchemaOverJson:off
+    yield* badges.tryAward("skill_explorer", row.createdAt, JSON.stringify({ distinctSkills }));
+  }
+});
 
 const normalizeIdentifier = (v: string | null): string | null => {
   if (!v) return null;
@@ -239,113 +242,114 @@ const normalizeIdentifier = (v: string | null): string | null => {
   return t.length > 0 ? t : null;
 };
 
-const trackAppVarietyFromInput = (input: RecordUsageInput, todayUtc: string) =>
-  Effect.gen(function* () {
-    const variety = yield* AppVarietyStore;
-    const host = normalizeIdentifier(input.siteHost);
-    if (host) return yield* variety.track(todayUtc, `host:${host}`);
-    const bundle = normalizeIdentifier(input.bundleId);
-    if (bundle) return yield* variety.track(todayUtc, `bundle:${bundle}`);
-  });
+const trackAppVarietyFromInput = Effect.fnUntraced(function* (
+  input: RecordUsageInput,
+  todayUtc: string
+) {
+  const variety = yield* AppVarietyStore;
+  const host = normalizeIdentifier(input.siteHost);
+  if (host) return yield* variety.track(todayUtc, `host:${host}`);
+  const bundle = normalizeIdentifier(input.bundleId);
+  if (bundle) return yield* variety.track(todayUtc, `bundle:${bundle}`);
+});
 
-const bumpTotalWords = (added: number) =>
-  Effect.gen(function* () {
-    const summary = yield* SummaryStore;
-    return yield* summary.incrementTotalWords(added);
-  });
+const bumpTotalWords = Effect.fnUntraced(function* (added: number) {
+  const summary = yield* SummaryStore;
+  return yield* summary.incrementTotalWords(added);
+});
 
 interface RecordUsageReadout extends ProgressSnapshot {
   readonly localDayRows: ReadonlyArray<LocalDayAggregate>;
   readonly todayWordCountLocal: number;
 }
 
-const readRecordUsageSnapshot = (localDate: string, todayUtc: string) =>
-  Effect.gen(function* () {
-    const entries = yield* SnapshotReader;
-    const variety = yield* AppVarietyStore;
-    const [
-      successEntryCount,
-      recentDays,
-      todayWordCountUtc,
-      todayWordCountLocal,
-      bestSessionWordsAllTime,
-      distinctAppsToday,
+const readRecordUsageSnapshot = Effect.fnUntraced(function* (localDate: string, todayUtc: string) {
+  const entries = yield* SnapshotReader;
+  const variety = yield* AppVarietyStore;
+  const [
+    successEntryCount,
+    recentDays,
+    todayWordCountUtc,
+    todayWordCountLocal,
+    bestSessionWordsAllTime,
+    distinctAppsToday,
+    languageWordTotals,
+    distinctSkillsAllTime,
+    distinctPlatformsToday,
+    localDayRows,
+  ] = yield* Effect.all(
+    [
+      entries.countSuccess(),
+      entries.recentActiveDaysDescUtc(STREAK_DAYS_LOOKBACK),
+      entries.sumTodayWordCountUtc(todayUtc),
+      entries.sumTodayWordCountLocal(localDate),
+      entries.maxWordCountAllTime(),
+      variety.countDistinctToday(todayUtc),
+      entries.languageWordTotalsAllTime(),
+      entries.distinctSkillsAllTime(),
+      entries.distinctPlatformsToday(todayUtc),
+      entries.aggregateLocalDays(LOCAL_DAYS_LOOKBACK),
+    ],
+    { concurrency: "unbounded" }
+  );
+  const currentStreak = computeStreak(recentDays, todayUtc);
+  const readout: RecordUsageReadout = {
+    todayUtc,
+    successEntryCount,
+    currentStreak,
+    todayWordCountUtc,
+    bestSessionWordsAllTime,
+    distinctAppsToday,
+    qualifyingLanguagesAllTime: countQualifyingLanguages(
       languageWordTotals,
-      distinctSkillsAllTime,
-      distinctPlatformsToday,
-      localDayRows,
-    ] = yield* Effect.all(
-      [
-        entries.countSuccess(),
-        entries.recentActiveDaysDescUtc(STREAK_DAYS_LOOKBACK),
-        entries.sumTodayWordCountUtc(todayUtc),
-        entries.sumTodayWordCountLocal(localDate),
-        entries.maxWordCountAllTime(),
-        variety.countDistinctToday(todayUtc),
-        entries.languageWordTotalsAllTime(),
-        entries.distinctSkillsAllTime(),
-        entries.distinctPlatformsToday(todayUtc),
-        entries.aggregateLocalDays(LOCAL_DAYS_LOOKBACK),
-      ],
-      { concurrency: "unbounded" }
-    );
-    const currentStreak = computeStreak(recentDays, todayUtc);
-    const readout: RecordUsageReadout = {
-      todayUtc,
-      successEntryCount,
-      currentStreak,
-      todayWordCountUtc,
-      bestSessionWordsAllTime,
-      distinctAppsToday,
-      qualifyingLanguagesAllTime: countQualifyingLanguages(
-        languageWordTotals,
-        BILINGUAL_MIN_WORDS_PER_LANGUAGE
-      ),
-      distinctSkillsAllTime,
-      distinctPlatformsToday,
-      localDayRows,
-      todayWordCountLocal,
-    };
-    return readout;
-  });
+      BILINGUAL_MIN_WORDS_PER_LANGUAGE
+    ),
+    distinctSkillsAllTime,
+    distinctPlatformsToday,
+    localDayRows,
+    todayWordCountLocal,
+  };
+  return readout;
+});
 
-const awardAchievements = (snap: UnlockSnapshot, earnedAt: number) =>
-  Effect.gen(function* () {
-    const badges = yield* BadgeStore;
-    const unlocked: Array<UnlockedAchievement> = [];
-    for (const rule of ACHIEVEMENT_RULES) {
-      const outcome = rule.evaluate(snap);
-      if (!outcome) continue;
-      const won = yield* badges.tryAward(rule.key, earnedAt, outcome.contextJson);
-      if (won) {
-        unlocked.push({ key: rule.key, earnedAt, contextJson: outcome.contextJson });
-      }
+const awardAchievements = Effect.fnUntraced(function* (snap: UnlockSnapshot, earnedAt: number) {
+  const badges = yield* BadgeStore;
+  const unlocked: Array<UnlockedAchievement> = [];
+  for (const rule of ACHIEVEMENT_RULES) {
+    const outcome = rule.evaluate(snap);
+    if (!outcome) continue;
+    const won = yield* badges.tryAward(rule.key, earnedAt, outcome.contextJson);
+    if (won) {
+      unlocked.push({ key: rule.key, earnedAt, contextJson: outcome.contextJson });
     }
-    return unlocked;
-  });
+  }
+  return unlocked;
+});
 
-const awardMilestones = (prevTotal: number, newTotal: number, earnedAt: number) =>
-  Effect.gen(function* () {
-    const badges = yield* BadgeStore;
-    const unlocked: Array<UnlockedMilestone> = [];
-    for (const crossing of evaluateMilestoneCrossings(prevTotal, newTotal)) {
-      const won = yield* badges.tryAward(crossing.key, earnedAt, crossing.contextJson);
-      if (won) {
-        unlocked.push({
-          key: crossing.key,
-          earnedAt,
-          contextJson: crossing.contextJson,
-        });
-      }
+const awardMilestones = Effect.fnUntraced(function* (
+  prevTotal: number,
+  newTotal: number,
+  earnedAt: number
+) {
+  const badges = yield* BadgeStore;
+  const unlocked: Array<UnlockedMilestone> = [];
+  for (const crossing of evaluateMilestoneCrossings(prevTotal, newTotal)) {
+    const won = yield* badges.tryAward(crossing.key, earnedAt, crossing.contextJson);
+    if (won) {
+      unlocked.push({
+        key: crossing.key,
+        earnedAt,
+        contextJson: crossing.contextJson,
+      });
     }
-    return unlocked;
-  });
+  }
+  return unlocked;
+});
 
-const maybeUpdateMaxStreak = (currentStreak: number) =>
-  Effect.gen(function* () {
-    const summary = yield* SummaryStore;
-    yield* summary.raiseMaxStreak(currentStreak);
-  });
+const maybeUpdateMaxStreak = Effect.fnUntraced(function* (currentStreak: number) {
+  const summary = yield* SummaryStore;
+  yield* summary.raiseMaxStreak(currentStreak);
+});
 
 const computeRecordUsageStats = (
   input: RecordUsageInput,
@@ -367,64 +371,63 @@ const computeRecordUsageStats = (
   };
 };
 
-export const recordUsage = (input: RecordUsageInput) =>
-  Effect.gen(function* () {
-    const inputWordCount = input.inputWordCount ?? null;
-    const { localDate, localHour } = computeLocalDateHour(input.createdAt, input.timezone);
-    const todayUtc = utcDateString(input.createdAt);
+export const recordUsage = Effect.fnUntraced(function* (input: RecordUsageInput) {
+  const inputWordCount = input.inputWordCount ?? null;
+  const { localDate, localHour } = computeLocalDateHour(input.createdAt, input.timezone);
+  const todayUtc = utcDateString(input.createdAt);
 
-    const writer = yield* EntryWriter;
-    const wasInserted = yield* writer.insert({
-      id: input.id,
-      wordCount: input.wordCount,
-      bundleId: input.bundleId,
-      siteHost: input.siteHost,
-      surfaceContext: input.surfaceContext,
-      enginesJson: input.enginesJson,
-      durationMs: input.durationMs,
-      createdAt: input.createdAt,
-      platform: input.platform,
-      os: input.os,
-      language: input.language,
-      inputWordCount,
-      localDate,
-      localHour,
-      timezone: input.timezone,
-    });
-
-    if (!wasInserted) {
-      const readout = yield* readRecordUsageSnapshot(localDate, todayUtc);
-      const stats = computeRecordUsageStats(input, inputWordCount, readout, todayUtc);
-      return { unlockedAchievements: [], unlockedMilestones: [], stats } as RecordUsageResult;
-    }
-
-    yield* trackAppVarietyFromInput(input, todayUtc);
-    const { prevTotal, newTotal } = yield* bumpTotalWords(input.wordCount);
-    const readout = yield* readRecordUsageSnapshot(localDate, todayUtc);
-
-    const unlockSnap: UnlockSnapshot = {
-      ...readout,
-      entry: {
-        wordCount: input.wordCount,
-        inputWordCount,
-        durationMs: input.durationMs,
-        language: input.language,
-        createdAt: input.createdAt,
-      },
-    };
-    const unlocked = yield* awardAchievements(unlockSnap, input.createdAt);
-    yield* maybeUpdateMaxStreak(readout.currentStreak);
-    const unlockedMilestones = yield* awardMilestones(prevTotal, newTotal, input.createdAt);
-
-    const stats = computeRecordUsageStats(input, inputWordCount, readout, todayUtc);
-
-    const result: RecordUsageResult = {
-      unlockedAchievements: unlocked,
-      unlockedMilestones,
-      stats,
-    };
-    return result;
+  const writer = yield* EntryWriter;
+  const wasInserted = yield* writer.insert({
+    id: input.id,
+    wordCount: input.wordCount,
+    bundleId: input.bundleId,
+    siteHost: input.siteHost,
+    surfaceContext: input.surfaceContext,
+    enginesJson: input.enginesJson,
+    durationMs: input.durationMs,
+    createdAt: input.createdAt,
+    platform: input.platform,
+    os: input.os,
+    language: input.language,
+    inputWordCount,
+    localDate,
+    localHour,
+    timezone: input.timezone,
   });
+
+  if (!wasInserted) {
+    const readout = yield* readRecordUsageSnapshot(localDate, todayUtc);
+    const stats = computeRecordUsageStats(input, inputWordCount, readout, todayUtc);
+    return { unlockedAchievements: [], unlockedMilestones: [], stats } as RecordUsageResult;
+  }
+
+  yield* trackAppVarietyFromInput(input, todayUtc);
+  const { prevTotal, newTotal } = yield* bumpTotalWords(input.wordCount);
+  const readout = yield* readRecordUsageSnapshot(localDate, todayUtc);
+
+  const unlockSnap: UnlockSnapshot = {
+    ...readout,
+    entry: {
+      wordCount: input.wordCount,
+      inputWordCount,
+      durationMs: input.durationMs,
+      language: input.language,
+      createdAt: input.createdAt,
+    },
+  };
+  const unlocked = yield* awardAchievements(unlockSnap, input.createdAt);
+  yield* maybeUpdateMaxStreak(readout.currentStreak);
+  const unlockedMilestones = yield* awardMilestones(prevTotal, newTotal, input.createdAt);
+
+  const stats = computeRecordUsageStats(input, inputWordCount, readout, todayUtc);
+
+  const result: RecordUsageResult = {
+    unlockedAchievements: unlocked,
+    unlockedMilestones,
+    stats,
+  };
+  return result;
+});
 
 export interface UsageInsights {
   readonly totals: { wordCount: number; durationMs: number; entryCount: number };
@@ -434,21 +437,20 @@ export interface UsageInsights {
   readonly hours: ReadonlyArray<HourAggregateRow>;
 }
 
-export const getUsageInsights = (range: InsightsRange) =>
-  Effect.gen(function* () {
-    const stats = yield* StatsReader;
-    const [totals, apps, platforms, languages, hours] = yield* Effect.all(
-      [
-        stats.rangeTotals(range),
-        stats.appUsageAggregate(range),
-        stats.platformAggregate(range),
-        stats.languageAggregate(range),
-        stats.hourAggregate(range),
-      ],
-      { concurrency: "unbounded" }
-    );
-    return { totals, apps, platforms, languages, hours } satisfies UsageInsights;
-  });
+export const getUsageInsights = Effect.fnUntraced(function* (range: InsightsRange) {
+  const stats = yield* StatsReader;
+  const [totals, apps, platforms, languages, hours] = yield* Effect.all(
+    [
+      stats.rangeTotals(range),
+      stats.appUsageAggregate(range),
+      stats.platformAggregate(range),
+      stats.languageAggregate(range),
+      stats.hourAggregate(range),
+    ],
+    { concurrency: "unbounded" }
+  );
+  return { totals, apps, platforms, languages, hours } satisfies UsageInsights;
+});
 
 export interface ShareCardStats {
   readonly totalWords: number;

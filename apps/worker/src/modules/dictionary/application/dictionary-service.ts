@@ -2,7 +2,7 @@ import { Context, Effect, Layer } from "effect";
 import type { Dictionary, DictionaryWord, Snippet } from "../domain/dictionary";
 import type { DictionaryRepositoryError } from "../errors";
 import { DictionaryRepository } from "./ports/dictionary-repository";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 
 export interface DictionaryServiceShape {
   readonly getDictionary: (userId: string) => Effect.Effect<Dictionary, DictionaryRepositoryError>;
@@ -34,68 +34,66 @@ export const DictionaryServiceLive = Layer.effect(
   Effect.gen(function* () {
     const dictionary = yield* DictionaryRepository;
     const obs = yield* Observability;
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     return DictionaryService.of({
-      getDictionary: (userId) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({ "dictionary.operation": "get" });
-          const result = yield* dictionary.getDictionary(userId);
-          yield* obs.setWideEvent({
-            wordCount: result.words.length,
-            snippetCount: result.snippets.length,
-          });
-          return result;
-        }).pipe(captureError),
+      getDictionary: Effect.fnUntraced(function* (userId: string) {
+        yield* obs.setWideEvent({ "dictionary.operation": "get" });
+        const result = yield* dictionary.getDictionary(userId);
+        yield* obs.setWideEvent({
+          wordCount: result.words.length,
+          snippetCount: result.snippets.length,
+        });
+        return result;
+      }, captureError),
 
-      addWord: (userId, word) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({
-            "dictionary.operation": "add_word",
-            wordLength: word.length,
-          });
-          const result = yield* dictionary.addWord(userId, word);
-          yield* obs.setWideEvent({
-            entityId: result.id,
-            normalizedWordLength: result.word.length,
-          });
-          return result;
-        }).pipe(captureError),
+      addWord: Effect.fnUntraced(function* (userId: string, word: string) {
+        yield* obs.setWideEvent({
+          "dictionary.operation": "add_word",
+          wordLength: word.length,
+        });
+        const result = yield* dictionary.addWord(userId, word);
+        yield* obs.setWideEvent({
+          entityId: result.id,
+          normalizedWordLength: result.word.length,
+        });
+        return result;
+      }, captureError),
 
-      removeWord: (userId, id) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({
-            "dictionary.operation": "remove_word",
-            entityId: id,
-          });
-          yield* dictionary.removeWord(userId, id);
-        }).pipe(captureError),
+      removeWord: Effect.fnUntraced(function* (userId: string, id: number) {
+        yield* obs.setWideEvent({
+          "dictionary.operation": "remove_word",
+          entityId: id,
+        });
+        yield* dictionary.removeWord(userId, id);
+      }, captureError),
 
-      addSnippet: (userId, triggerPhrase, expandedText) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({
-            "dictionary.operation": "add_snippet",
-            triggerLength: triggerPhrase.length,
-            snippetLength: expandedText.length,
-          });
-          const result = yield* dictionary.addSnippet(userId, triggerPhrase, expandedText);
-          yield* obs.setWideEvent({
-            entityId: result.id,
-            persistedTriggerLength: result.triggerPhrase.length,
-            persistedSnippetLength: result.expandedText.length,
-          });
-          return result;
-        }).pipe(captureError),
+      addSnippet: Effect.fnUntraced(function* (
+        userId: string,
+        triggerPhrase: string,
+        expandedText: string
+      ) {
+        yield* obs.setWideEvent({
+          "dictionary.operation": "add_snippet",
+          triggerLength: triggerPhrase.length,
+          snippetLength: expandedText.length,
+        });
+        const result = yield* dictionary.addSnippet(userId, triggerPhrase, expandedText);
+        yield* obs.setWideEvent({
+          entityId: result.id,
+          persistedTriggerLength: result.triggerPhrase.length,
+          persistedSnippetLength: result.expandedText.length,
+        });
+        return result;
+      }, captureError),
 
-      removeSnippet: (userId, id) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({
-            "dictionary.operation": "remove_snippet",
-            entityId: id,
-          });
-          yield* dictionary.removeSnippet(userId, id);
-        }).pipe(captureError),
+      removeSnippet: Effect.fnUntraced(function* (userId: string, id: number) {
+        yield* obs.setWideEvent({
+          "dictionary.operation": "remove_snippet",
+          entityId: id,
+        });
+        yield* dictionary.removeSnippet(userId, id);
+      }, captureError),
     });
   })
 );

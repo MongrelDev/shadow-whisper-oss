@@ -29,18 +29,17 @@ export const GoogleTokenExchangeServiceLive = Layer.effect(
        * Enforces the validate-then-exchange ordering: a redirect that does not belong
        * to the extension never reaches Google's token endpoint.
        */
-      exchange: (input) =>
-        Effect.gen(function* () {
-          if (!isValidExtensionRedirectUri(input.redirectUri, input.extensionId)) {
-            return yield* new InvalidRedirectUriError({ redirectUri: input.redirectUri });
-          }
+      exchange: Effect.fnUntraced(function* (input: ExchangeGoogleTokenInput) {
+        if (!isValidExtensionRedirectUri(input.redirectUri, input.extensionId)) {
+          return yield* new InvalidRedirectUriError({ redirectUri: input.redirectUri });
+        }
 
-          return yield* google.exchangeAuthorizationCode({
-            code: input.code,
-            codeVerifier: input.codeVerifier,
-            redirectUri: input.redirectUri,
-          });
-        }),
+        return yield* google.exchangeAuthorizationCode({
+          code: input.code,
+          codeVerifier: input.codeVerifier,
+          redirectUri: input.redirectUri,
+        });
+      }),
     })
   )
 );

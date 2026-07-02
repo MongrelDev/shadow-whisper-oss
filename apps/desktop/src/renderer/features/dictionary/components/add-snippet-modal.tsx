@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
 import { m } from "~/paraglide/messages";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { useSnippetMutations } from "@/hooks/use-snippets";
 
@@ -62,10 +63,11 @@ export function AddSnippetModal({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <Label htmlFor="snippet-trigger" className="text-muted-foreground">
               {m.dictionary_snippet_modal_trigger_label()}
-            </label>
+            </Label>
             <Input
+              id="snippet-trigger"
               {...register("trigger", { required: true })}
               placeholder={m.dictionary_snippet_modal_placeholder_trigger()}
               className="h-12 text-base font-mono"
@@ -74,10 +76,11 @@ export function AddSnippetModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <Label htmlFor="snippet-expanded" className="text-muted-foreground">
               {m.dictionary_snippet_modal_expanded_label()}
-            </label>
+            </Label>
             <Textarea
+              id="snippet-expanded"
               {...register("expanded", { required: true })}
               placeholder={m.dictionary_snippet_modal_placeholder_expanded()}
               className="text-base min-h-[100px]"
@@ -93,16 +96,14 @@ export function AddSnippetModal({
             >
               {m.dictionary_button_cancel()}
             </Button>
-            <Button type="submit" disabled={!isValid || adding}>
-              {adding ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {m.dictionary_button_adding()}
-                </>
-              ) : (
-                m.dictionary_button_confirm_add()
-              )}
-            </Button>
+            <AsyncButton
+              type="submit"
+              isPending={adding}
+              pendingLabel={m.dictionary_button_adding()}
+              disabled={!isValid}
+            >
+              {m.dictionary_button_confirm_add()}
+            </AsyncButton>
           </DialogFooter>
         </form>
       </DialogContent>

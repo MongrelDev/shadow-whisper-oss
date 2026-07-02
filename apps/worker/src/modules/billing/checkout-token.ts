@@ -39,20 +39,19 @@ export const makeCheckoutTokenService = (env: Env): CheckoutTokenService => {
           .sign(secret)
       ).pipe(Effect.orDie),
 
-    verify: (token) =>
-      Effect.gen(function* () {
-        const { payload } = yield* Effect.tryPromise({
-          try: () => jwtVerify(token, secret, { issuer, audience: AUDIENCE }),
-          catch: () =>
-            new InvalidCheckoutTokenError({ message: "Invalid or expired checkout token" }),
-        });
+    verify: Effect.fnUntraced(function* (token) {
+      const { payload } = yield* Effect.tryPromise({
+        try: () => jwtVerify(token, secret, { issuer, audience: AUDIENCE }),
+        catch: () =>
+          new InvalidCheckoutTokenError({ message: "Invalid or expired checkout token" }),
+      });
 
-        const userId = typeof payload.userId === "string" ? payload.userId : null;
-        if (!userId) {
-          return yield* new InvalidCheckoutTokenError({ message: "Missing userId in token" });
-        }
+      const userId = typeof payload.userId === "string" ? payload.userId : null;
+      if (!userId) {
+        return yield* new InvalidCheckoutTokenError({ message: "Missing userId in token" });
+      }
 
-        return { userId } satisfies CheckoutTokenPayload;
-      }),
+      return { userId } satisfies CheckoutTokenPayload;
+    }),
   };
 };

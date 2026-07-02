@@ -45,31 +45,30 @@ const touchCandidate = (deps: LedgerUsageTrackerDeps, entry: UsageEntry) => {
 };
 
 export const makeLedgerUsageTracker = (deps: LedgerUsageTrackerDeps): UsageTrackerService => ({
-  record: (entry) =>
-    Effect.gen(function* () {
-      const result = yield* deps.ledger
-        .recordUsage(deps.userId, {
-          id: entry.id,
-          wordCount: entry.wordCount,
-          bundleId: entry.bundleId,
-          siteHost: entry.siteHost,
-          surfaceContext: entry.surfaceContext,
-          // @effect-diagnostics-next-line preferSchemaOverJson:off
-          enginesJson: JSON.stringify(entry.engines),
-          durationMs: entry.durationMs,
-          createdAt: entry.createdAt,
-          inputWordCount: entry.inputWordCount,
-          platform: entry.platform,
-          os: entry.os,
-          language: entry.language,
-          timezone: entry.timezone,
-        })
-        .pipe(
-          Effect.mapError(
-            (e) => new UsageTrackerError({ message: `usage_tracker.record failed: ${e.message}` })
-          )
-        );
-      yield* touchCandidate(deps, entry);
-      return result;
-    }),
+  record: Effect.fnUntraced(function* (entry: UsageEntry) {
+    const result = yield* deps.ledger
+      .recordUsage(deps.userId, {
+        id: entry.id,
+        wordCount: entry.wordCount,
+        bundleId: entry.bundleId,
+        siteHost: entry.siteHost,
+        surfaceContext: entry.surfaceContext,
+        // @effect-diagnostics-next-line preferSchemaOverJson:off
+        enginesJson: JSON.stringify(entry.engines),
+        durationMs: entry.durationMs,
+        createdAt: entry.createdAt,
+        inputWordCount: entry.inputWordCount,
+        platform: entry.platform,
+        os: entry.os,
+        language: entry.language,
+        timezone: entry.timezone,
+      })
+      .pipe(
+        Effect.mapError(
+          (e) => new UsageTrackerError({ message: `usage_tracker.record failed: ${e.message}` })
+        )
+      );
+    yield* touchCandidate(deps, entry);
+    return result;
+  }),
 });

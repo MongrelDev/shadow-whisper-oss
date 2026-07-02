@@ -83,48 +83,47 @@ const extractValidateOutput = (result: unknown): ValidateAutoEditCandidatesOutpu
 };
 
 export const makeWorkersAiAutoEditValidator = (env: Env): AutoEditValidatorService => ({
-  validate: (input: AutoEditValidatorInput) =>
-    Effect.gen(function* () {
-      const provider = createWorkersAI({ binding: env.AI });
-      const sessionAffinity = hashAffinity(input.originalText);
-      const validateAutoEditCandidates = makeValidateAutoEditCandidatesTool();
-      const userMessage = buildUserMessage(input);
+  validate: Effect.fnUntraced(function* (input: AutoEditValidatorInput) {
+    const provider = createWorkersAI({ binding: env.AI });
+    const sessionAffinity = hashAffinity(input.originalText);
+    const validateAutoEditCandidates = makeValidateAutoEditCandidatesTool();
+    const userMessage = buildUserMessage(input);
 
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          generateText({
-            model: provider(VALIDATOR_MODEL, { sessionAffinity }),
-            system: AUTO_EDIT_SYSTEM_PROMPT,
-            prompt: userMessage,
-            tools: { validateAutoEditCandidates },
-            stopWhen: stepCountIs(2),
-            temperature: 0,
-            maxOutputTokens: MAX_OUTPUT_TOKENS,
-          }),
-        catch: (e) =>
-          new AutoEditValidatorError({
-            message: `[${VALIDATOR_MODEL}] ${unknownMessage(e)}`,
-          }),
-      });
+    const result = yield* Effect.tryPromise({
+      try: () =>
+        generateText({
+          model: provider(VALIDATOR_MODEL, { sessionAffinity }),
+          system: AUTO_EDIT_SYSTEM_PROMPT,
+          prompt: userMessage,
+          tools: { validateAutoEditCandidates },
+          stopWhen: stepCountIs(2),
+          temperature: 0,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        }),
+      catch: (e) =>
+        new AutoEditValidatorError({
+          message: `[${VALIDATOR_MODEL}] ${unknownMessage(e)}`,
+        }),
+    });
 
-      const toolOutput = extractValidateOutput(result);
-      const candidatesFromLlm = toolOutput?.accepted ?? [];
-      const filtered = filterHallucinatedAccepted(
-        [...candidatesFromLlm],
-        input.originalText,
-        input.editedText
-      );
+    const toolOutput = extractValidateOutput(result);
+    const candidatesFromLlm = toolOutput?.accepted ?? [];
+    const filtered = filterHallucinatedAccepted(
+      [...candidatesFromLlm],
+      input.originalText,
+      input.editedText
+    );
 
-      yield* enrichWideEvent({
-        autoEditValidator: {
-          model: VALIDATOR_MODEL,
-          candidateCount: input.candidates.length,
-          rawCount: candidatesFromLlm.length,
-          keptCount: filtered.length,
-        },
-      });
+    yield* enrichWideEvent({
+      autoEditValidator: {
+        model: VALIDATOR_MODEL,
+        candidateCount: input.candidates.length,
+        rawCount: candidatesFromLlm.length,
+        keptCount: filtered.length,
+      },
+    });
 
-      const out: AutoEditValidatorResult = { accepted: filtered };
-      return out;
-    }),
+    const out: AutoEditValidatorResult = { accepted: filtered };
+    return out;
+  }),
 });

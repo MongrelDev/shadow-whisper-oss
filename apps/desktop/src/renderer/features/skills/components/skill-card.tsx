@@ -83,7 +83,14 @@ function CustomSkillActions({
   return (
     <div className="flex items-center gap-1.5">
       {onEdit && (
-        <Button type="button" variant="ghost" size="icon" onClick={onEdit} className="size-8">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onEdit}
+          title={m.skills_card_edit_label()}
+          className="size-8"
+        >
           <Pencil className="size-3.5" strokeWidth={1.75} />
         </Button>
       )}
@@ -94,6 +101,7 @@ function CustomSkillActions({
           size="icon"
           onClick={onDelete}
           disabled={isDeletePending}
+          title={m.skills_card_delete_label()}
           className="size-8 text-destructive hover:text-destructive"
         >
           {isDeletePending ? (

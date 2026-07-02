@@ -94,7 +94,7 @@ function Reason({
 }
 
 function Separator(): React.ReactElement {
-  return <span className="h-3.5 w-px shrink-0 bg-white/10" aria-hidden />;
+  return <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />;
 }
 
 function Hint({ children }: { children: ReactNode }): React.ReactElement {
@@ -124,7 +124,7 @@ function Action({ onClick, children, icon }: ActionProps): React.ReactElement {
       type="button"
       onClick={onClick}
       whileTap={{ scale: 0.96 }}
-      className="relative inline-flex items-center gap-1.5 rounded-md border border-white/8 bg-white/[0.05] px-2 py-[3px] text-[12px] font-medium tracking-tight text-foreground transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+      className="relative inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/50 px-2 py-[3px] text-[12px] font-medium tracking-tight text-foreground transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
     >
       {resolvedIcon}
       {children}

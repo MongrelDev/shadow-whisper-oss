@@ -65,64 +65,63 @@ const buildUserMessage = (input: DetectWordPairInput): string => {
 };
 
 export const makeWorkersAiWordPairDetector = (env: Env): WordPairDetectorService => ({
-  detect: (input) =>
-    Effect.gen(function* () {
-      const provider = createWorkersAI({ binding: env.AI });
-      const sessionAffinity = `ses_${input.userId}`;
+  detect: Effect.fnUntraced(function* (input: DetectWordPairInput) {
+    const provider = createWorkersAI({ binding: env.AI });
+    const sessionAffinity = `ses_${input.userId}`;
 
-      const proposeDictionaryEntry = makeProposeDictionaryEntryTool();
-      const userMessage = buildUserMessage(input);
+    const proposeDictionaryEntry = makeProposeDictionaryEntryTool();
+    const userMessage = buildUserMessage(input);
 
-      const callModel = (modelId: string) =>
-        Effect.tryPromise({
-          try: () =>
-            generateText({
-              model: provider(modelId, { sessionAffinity }),
-              system: SYSTEM_PROMPT,
-              prompt: userMessage,
-              tools: { proposeDictionaryEntry },
-              stopWhen: stepCountIs(2),
-              temperature: 0,
-              maxOutputTokens: MAX_OUTPUT_TOKENS,
-            }),
-          catch: (e) =>
-            new WordPairDetectionError({
-              message: `[${modelId}] ${unknownMessage(e)}`,
-            }),
-        }).pipe(
-          Effect.timeoutOrElse({
-            duration: Duration.seconds(90),
-            orElse: () =>
-              Effect.fail(
-                new WordPairDetectionError({ message: `[${modelId}] llm timeout 90000ms` })
-              ),
-          })
-        );
+    const callModel = (modelId: string) =>
+      Effect.tryPromise({
+        try: () =>
+          generateText({
+            model: provider(modelId, { sessionAffinity }),
+            system: SYSTEM_PROMPT,
+            prompt: userMessage,
+            tools: { proposeDictionaryEntry },
+            stopWhen: stepCountIs(2),
+            temperature: 0,
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+          }),
+        catch: (e) =>
+          new WordPairDetectionError({
+            message: `[${modelId}] ${unknownMessage(e)}`,
+          }),
+      }).pipe(
+        Effect.timeoutOrElse({
+          duration: Duration.seconds(90),
+          orElse: () =>
+            Effect.fail(
+              new WordPairDetectionError({ message: `[${modelId}] llm timeout 90000ms` })
+            ),
+        })
+      );
 
-      const [elapsed, result] = yield* Effect.timed(callModel(DETECTOR_MODEL));
+    const [elapsed, result] = yield* Effect.timed(callModel(DETECTOR_MODEL));
 
-      const toolOutput = extractProposeOutput(result);
-      const proposed = !!(toolOutput && toolOutput.pairs.length > 0);
+    const toolOutput = extractProposeOutput(result);
+    const proposed = !!(toolOutput && toolOutput.pairs.length > 0);
 
-      yield* enrichWideEvent({
-        wordPairDetector: {
-          modelId: DETECTOR_MODEL,
-          callMs: Duration.toMillis(elapsed),
-          recentTranscriptionCount: input.recentTranscriptions.length,
-          ...summarizeResult(result),
-          decision: proposed ? "proposed" : "not-proposed",
-          pairCount: proposed ? toolOutput!.pairs.length : 0,
-        },
-      });
+    yield* enrichWideEvent({
+      wordPairDetector: {
+        modelId: DETECTOR_MODEL,
+        callMs: Duration.toMillis(elapsed),
+        recentTranscriptionCount: input.recentTranscriptions.length,
+        ...summarizeResult(result),
+        decision: proposed ? "proposed" : "not-proposed",
+        pairCount: proposed ? toolOutput!.pairs.length : 0,
+      },
+    });
 
-      if (proposed) {
-        return {
-          proposed: true,
-          pairs: toolOutput!.pairs,
-        } satisfies DetectWordPairResult;
-      }
-      return { proposed: false } satisfies DetectWordPairResult;
-    }),
+    if (proposed) {
+      return {
+        proposed: true,
+        pairs: toolOutput!.pairs,
+      } satisfies DetectWordPairResult;
+    }
+    return { proposed: false } satisfies DetectWordPairResult;
+  }),
 });
 
 const summarizeResult = (result: unknown) => {

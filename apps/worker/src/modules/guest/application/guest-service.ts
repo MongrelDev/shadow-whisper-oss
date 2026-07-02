@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { GuestSession } from "./ports/guest-session";
 import { GuestAgentIdentity } from "./ports/guest-agent-identity";
 import { GuestJobService } from "./ports/guest-job-service";
@@ -66,45 +66,48 @@ export const GuestServiceLive = Layer.effect(
     const jobs = yield* GuestJobService;
     const tokenSigner = yield* GuestSessionTokenSigner;
 
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
-    const verifyGuestSession = (cookieHeader: string | null, sessionId: string) =>
-      Effect.gen(function* () {
-        const { cookieValue, isNew } = yield* session.readOrMint(cookieHeader);
-        if (isNew) {
-          return yield* new GuestSessionAuthError({ reason: "missing_token" });
-        }
-        const result = yield* tokenSigner.verify(sessionId, cookieValue);
-        if (!result.ok) {
-          return yield* new GuestSessionAuthError({ reason: result.reason });
-        }
-        const agentId = yield* identity.derive(cookieValue);
-        return agentId;
-      });
+    const verifyGuestSession = Effect.fnUntraced(function* (
+      cookieHeader: string | null,
+      sessionId: string
+    ) {
+      const { cookieValue, isNew } = yield* session.readOrMint(cookieHeader);
+      if (isNew) {
+        return yield* new GuestSessionAuthError({ reason: "missing_token" });
+      }
+      const result = yield* tokenSigner.verify(sessionId, cookieValue);
+      if (!result.ok) {
+        return yield* new GuestSessionAuthError({ reason: result.reason });
+      }
+      const agentId = yield* identity.derive(cookieValue);
+      return agentId;
+    });
 
     return GuestService.of({
-      warmupGuest: ({ cookieHeader }) =>
-        Effect.gen(function* () {
-          const { cookieValue, isNew } = yield* session.readOrMint(cookieHeader);
-          const sessionId = yield* tokenSigner.sign(cookieValue);
-          const setCookieHeader = isNew ? session.serializeCookie(cookieValue) : null;
-          return { sessionId, setCookieHeader };
-        }),
+      warmupGuest: Effect.fnUntraced(function* ({ cookieHeader }: WarmupGuestInput) {
+        const { cookieValue, isNew } = yield* session.readOrMint(cookieHeader);
+        const sessionId = yield* tokenSigner.sign(cookieValue);
+        const setCookieHeader = isNew ? session.serializeCookie(cookieValue) : null;
+        return { sessionId, setCookieHeader };
+      }),
 
-      startTranscribeJob: (input) =>
-        Effect.gen(function* () {
+      startTranscribeJob: Effect.fnUntraced(
+        function* (input: StartTranscribeJobInput) {
           const agentId = yield* verifyGuestSession(input.cookieHeader, input.sessionId);
           return yield* jobs.startTranscribe({ agentId, audio: input.audio, locale: input.locale });
-        }).pipe(
-          captureError,
-          Effect.withSpan("guest.transcribe-job", {
-            attributes: { "session.locale": input.locale },
-          })
-        ),
+        },
+        (eff, input) =>
+          eff.pipe(
+            captureError,
+            Effect.withSpan("guest.transcribe-job", {
+              attributes: { "session.locale": input.locale },
+            })
+          )
+      ),
 
-      startSkillJob: (input) =>
-        Effect.gen(function* () {
+      startSkillJob: Effect.fnUntraced(
+        function* (input: StartSkillJobInput) {
           const agentId = yield* verifyGuestSession(input.cookieHeader, input.sessionId);
           return yield* jobs.startSkill({
             agentId,
@@ -112,12 +115,15 @@ export const GuestServiceLive = Layer.effect(
             locale: input.locale,
             inputText: input.inputText,
           });
-        }).pipe(
-          captureError,
-          Effect.withSpan("guest.skill-job", {
-            attributes: { "skill.id": input.skillId, "input.length": input.inputText.length },
-          })
-        ),
+        },
+        (eff, input) =>
+          eff.pipe(
+            captureError,
+            Effect.withSpan("guest.skill-job", {
+              attributes: { "skill.id": input.skillId, "input.length": input.inputText.length },
+            })
+          )
+      ),
     });
   })
 );

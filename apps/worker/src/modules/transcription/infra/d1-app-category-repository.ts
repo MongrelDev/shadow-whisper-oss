@@ -51,20 +51,19 @@ const toEntry = (row: ResolveRow | null): AppRegistryEntry | null => {
 };
 
 export const makeD1AppCategoryRepository = (db: DrizzleDatabase): AppCategoryRepositoryService => ({
-  resolve: (input: ResolveAppCategoryInput) =>
-    Effect.gen(function* () {
-      const bundleId = input.bundleId.trim().toLowerCase();
-      const host = input.host?.trim().toLowerCase() ?? "";
+  resolve: Effect.fnUntraced(function* (input: ResolveAppCategoryInput) {
+    const bundleId = input.bundleId.trim().toLowerCase();
+    const host = input.host?.trim().toLowerCase() ?? "";
 
-      // The website takes priority over the app: if the request carries a host that we
-      // recognize, that site's category wins. An unrecognized host (or none) falls back
-      // to the focused app's own category. A stray host from a non-browser app is
-      // naturally contained — it simply won't be in app_host_registry.
-      if (host) {
-        const siteEntry = toEntry(yield* selectSiteByHost(db, host));
-        if (siteEntry) return siteEntry;
-      }
+    // The website takes priority over the app: if the request carries a host that we
+    // recognize, that site's category wins. An unrecognized host (or none) falls back
+    // to the focused app's own category. A stray host from a non-browser app is
+    // naturally contained — it simply won't be in app_host_registry.
+    if (host) {
+      const siteEntry = toEntry(yield* selectSiteByHost(db, host));
+      if (siteEntry) return siteEntry;
+    }
 
-      return bundleId ? toEntry(yield* selectAppByIdentifier(db, bundleId)) : null;
-    }),
+    return bundleId ? toEntry(yield* selectAppByIdentifier(db, bundleId)) : null;
+  }),
 });
