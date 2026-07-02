@@ -136,186 +136,182 @@ export const AffiliateRewardServiceLive = Layer.effect(
     const batchWriter = yield* AffiliateBatchWriter;
     const stripeReward = yield* StripeRewardClient;
 
-    const resolveOrCreateReward = (params: {
+    const resolveOrCreateReward = Effect.fnUntraced(function* (params: {
       readonly existing: AffiliateReward | null;
       readonly referralId: number;
       readonly referrerUserId: string;
       readonly invoiceId: string;
       readonly stripeEventId: string;
       readonly targetTrialEnd: number;
-    }) =>
-      Effect.gen(function* () {
-        if (params.existing) {
-          if (params.existing.targetTrialEnd === null) {
-            yield* rewardRepo.updateStatus(params.existing.id, {
-              status: params.existing.status,
-              targetTrialEnd: params.targetTrialEnd,
-              updatedAt: nowIso(),
-            });
-          }
-          return params.existing;
-        }
-        return yield* rewardRepo.create(
-          toPendingReward({
-            referralId: params.referralId,
-            referrerUserId: params.referrerUserId,
-            invoiceId: params.invoiceId,
-            stripeEventId: params.stripeEventId,
+    }) {
+      if (params.existing) {
+        if (params.existing.targetTrialEnd === null) {
+          yield* rewardRepo.updateStatus(params.existing.id, {
+            status: params.existing.status,
             targetTrialEnd: params.targetTrialEnd,
-          })
-        );
-      });
+            updatedAt: nowIso(),
+          });
+        }
+        return params.existing;
+      }
+      return yield* rewardRepo.create(
+        toPendingReward({
+          referralId: params.referralId,
+          referrerUserId: params.referrerUserId,
+          invoiceId: params.invoiceId,
+          stripeEventId: params.stripeEventId,
+          targetTrialEnd: params.targetTrialEnd,
+        })
+      );
+    });
 
-    const handleMissingReferrerSubscription = (params: {
+    const handleMissingReferrerSubscription = Effect.fnUntraced(function* (params: {
       readonly existingReward: AffiliateReward | null;
       readonly referralId: number;
       readonly referrerUserId: string;
       readonly invoiceId: string;
       readonly stripeEventId: string;
-    }) =>
-      Effect.gen(function* () {
-        const reason = "Referrer has no active subscription";
-        if (params.existingReward) {
-          yield* rewardRepo.updateStatus(params.existingReward.id, {
-            status: "failed",
-            cancelReason: reason,
-            updatedAt: nowIso(),
-          });
-        } else {
-          yield* rewardRepo.create(
-            toFailedReward({
-              referralId: params.referralId,
-              referrerUserId: params.referrerUserId,
-              invoiceId: params.invoiceId,
-              stripeEventId: params.stripeEventId,
-              reason,
-            })
-          );
-        }
-        yield* Effect.logWarning("Referrer has no active subscription, skipping reward");
-      });
-
-    const findProcessableReferral = (userId: string, invoiceId: string) =>
-      Effect.gen(function* () {
-        const pendingReferral = yield* referralRepo.findPendingByReferredUserId(userId);
-        const referral = pendingReferral ?? (yield* referralRepo.findByReferredUserId(userId));
-        if (!referral) return null;
-        if (
-          !canProcessReferral({
-            status: referral.status,
-            firstPaidInvoiceId: referral.firstPaidInvoiceId,
-            invoiceId,
+    }) {
+      const reason = "Referrer has no active subscription";
+      if (params.existingReward) {
+        yield* rewardRepo.updateStatus(params.existingReward.id, {
+          status: "failed",
+          cancelReason: reason,
+          updatedAt: nowIso(),
+        });
+      } else {
+        yield* rewardRepo.create(
+          toFailedReward({
+            referralId: params.referralId,
+            referrerUserId: params.referrerUserId,
+            invoiceId: params.invoiceId,
+            stripeEventId: params.stripeEventId,
+            reason,
           })
-        ) {
-          return null;
-        }
+        );
+      }
+      yield* Effect.logWarning("Referrer has no active subscription, skipping reward");
+    });
 
-        const retryReward = yield* rewardRepo.findByReferralId(referral.id);
-        if (retryReward && !shouldRetryReward(retryReward)) return null;
+    const findProcessableReferral = Effect.fnUntraced(function* (
+      userId: string,
+      invoiceId: string
+    ) {
+      const pendingReferral = yield* referralRepo.findPendingByReferredUserId(userId);
+      const referral = pendingReferral ?? (yield* referralRepo.findByReferredUserId(userId));
+      if (!referral) return null;
+      if (
+        !canProcessReferral({
+          status: referral.status,
+          firstPaidInvoiceId: referral.firstPaidInvoiceId,
+          invoiceId,
+        })
+      ) {
+        return null;
+      }
 
-        return { referral, retryReward };
-      });
+      const retryReward = yield* rewardRepo.findByReferralId(referral.id);
+      if (retryReward && !shouldRetryReward(retryReward)) return null;
 
-    const findEligibleReferral = (params: {
+      return { referral, retryReward };
+    });
+
+    const findEligibleReferral = Effect.fnUntraced(function* (params: {
       readonly stripeCustomerId: string;
       readonly invoiceId: string;
-    }) =>
-      Effect.gen(function* () {
-        const userId = yield* userReader.getUserIdByStripeCustomerId(params.stripeCustomerId);
-        if (!userId) return null;
-        return yield* findProcessableReferral(userId, params.invoiceId);
-      });
+    }) {
+      const userId = yield* userReader.getUserIdByStripeCustomerId(params.stripeCustomerId);
+      if (!userId) return null;
+      return yield* findProcessableReferral(userId, params.invoiceId);
+    });
 
-    const grantRewardToReferrer = (params: {
+    const grantRewardToReferrer = Effect.fnUntraced(function* (params: {
       readonly referral: AffiliateReferral;
       readonly existingRetryReward: AffiliateReward | null;
       readonly invoiceId: string;
       readonly stripeEventId: string;
-    }) =>
-      Effect.gen(function* () {
-        const { stripeSubscriptionId: referrerStripeSubId } = yield* userReader.getBillingProfile(
-          params.referral.referrerUserId
-        );
-        if (!referrerStripeSubId) {
-          yield* handleMissingReferrerSubscription({
-            existingReward: params.existingRetryReward,
-            referralId: params.referral.id,
-            referrerUserId: params.referral.referrerUserId,
-            invoiceId: params.invoiceId,
-            stripeEventId: params.stripeEventId,
-          });
-          return;
-        }
-
-        const targetTrialEnd =
-          params.existingRetryReward?.targetTrialEnd ??
-          (yield* stripeReward.calculateSubscriptionExtensionTarget({
-            stripeSubscriptionId: referrerStripeSubId,
-            daysToAdd: REWARD_DAYS,
-          }));
-
-        const reward = yield* resolveOrCreateReward({
-          existing: params.existingRetryReward,
+    }) {
+      const { stripeSubscriptionId: referrerStripeSubId } = yield* userReader.getBillingProfile(
+        params.referral.referrerUserId
+      );
+      if (!referrerStripeSubId) {
+        yield* handleMissingReferrerSubscription({
+          existingReward: params.existingRetryReward,
           referralId: params.referral.id,
           referrerUserId: params.referral.referrerUserId,
           invoiceId: params.invoiceId,
           stripeEventId: params.stripeEventId,
-          targetTrialEnd,
         });
+        return;
+      }
 
-        yield* stripeReward.extendSubscriptionTrial({
+      const targetTrialEnd =
+        params.existingRetryReward?.targetTrialEnd ??
+        (yield* stripeReward.calculateSubscriptionExtensionTarget({
           stripeSubscriptionId: referrerStripeSubId,
-          targetTrialEnd,
-          idempotencyKey: `affiliate-reward:${reward.id}:subscription-extension`,
-        });
+          daysToAdd: REWARD_DAYS,
+        }));
 
-        const now = nowIso();
-        yield* batchWriter.grantRewardWithReferralUpdate({
-          rewardId: reward.id,
-          rewardUpdate: toGrantedUpdate(now),
-          referralId: params.referral.id,
-          referralUpdate: toRewardedUpdate(now),
-        });
+      const reward = yield* resolveOrCreateReward({
+        existing: params.existingRetryReward,
+        referralId: params.referral.id,
+        referrerUserId: params.referral.referrerUserId,
+        invoiceId: params.invoiceId,
+        stripeEventId: params.stripeEventId,
+        targetTrialEnd,
       });
 
+      yield* stripeReward.extendSubscriptionTrial({
+        stripeSubscriptionId: referrerStripeSubId,
+        targetTrialEnd,
+        idempotencyKey: `affiliate-reward:${reward.id}:subscription-extension`,
+      });
+
+      const now = nowIso();
+      yield* batchWriter.grantRewardWithReferralUpdate({
+        rewardId: reward.id,
+        rewardUpdate: toGrantedUpdate(now),
+        referralId: params.referral.id,
+        referralUpdate: toRewardedUpdate(now),
+      });
+    });
+
     return AffiliateRewardService.of({
-      processInvoicePaid: (input) =>
-        Effect.gen(function* () {
-          const { invoiceId, stripeCustomerId, amountPaid, stripeEventId } = input;
+      processInvoicePaid: Effect.fnUntraced(function* (input: InvoicePaidInput) {
+        const { invoiceId, stripeCustomerId, amountPaid, stripeEventId } = input;
 
-          if (amountPaid <= 0) return;
+        if (amountPaid <= 0) return;
 
-          const existingReward = yield* rewardRepo.findByStripeEventId(stripeEventId);
-          if (isCompletedReward(existingReward)) return;
+        const existingReward = yield* rewardRepo.findByStripeEventId(stripeEventId);
+        if (isCompletedReward(existingReward)) return;
 
-          const match = yield* findEligibleReferral({ stripeCustomerId, invoiceId });
-          if (!match) return;
+        const match = yield* findEligibleReferral({ stripeCustomerId, invoiceId });
+        if (!match) return;
 
-          const { referral, retryReward } = match;
-          const existingRetryReward = existingReward ?? retryReward;
+        const { referral, retryReward } = match;
+        const existingRetryReward = existingReward ?? retryReward;
 
-          if (referral.status === "pending") {
-            yield* referralRepo.updateStatus(referral.id, toQualifiedUpdate(invoiceId, nowIso()));
-          }
+        if (referral.status === "pending") {
+          yield* referralRepo.updateStatus(referral.id, toQualifiedUpdate(invoiceId, nowIso()));
+        }
 
-          yield* grantRewardToReferrer({
-            referral,
-            existingRetryReward,
-            invoiceId,
-            stripeEventId,
-          });
-        }),
+        yield* grantRewardToReferrer({
+          referral,
+          existingRetryReward,
+          invoiceId,
+          stripeEventId,
+        });
+      }),
 
-      syncProfileActiveStatus: (input) =>
-        Effect.gen(function* () {
-          const userId = yield* userReader.getUserIdByStripeCustomerId(input.stripeCustomerId);
-          if (!userId) return;
-          yield* profileRepo.updateActiveByUserId(
-            userId,
-            ELIGIBLE_SUBSCRIPTION_STATUSES.has(input.subscriptionStatus),
-            nowIso()
-          );
-        }),
+      syncProfileActiveStatus: Effect.fnUntraced(function* (input: SyncProfileActiveStatusInput) {
+        const userId = yield* userReader.getUserIdByStripeCustomerId(input.stripeCustomerId);
+        if (!userId) return;
+        yield* profileRepo.updateActiveByUserId(
+          userId,
+          ELIGIBLE_SUBSCRIPTION_STATUSES.has(input.subscriptionStatus),
+          nowIso()
+        );
+      }),
     });
   })
 );

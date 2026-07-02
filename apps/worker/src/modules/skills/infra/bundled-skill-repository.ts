@@ -72,15 +72,14 @@ function loadOne(key: string): Effect.Effect<string | null, SkillLoaderError> {
 const repository: SkillRepositoryService = {
   load: loadOne,
 
-  compose: (keys) =>
-    Effect.gen(function* () {
-      if (keys.length === 0) return "";
-      const bodies = yield* Effect.all(keys.map(loadOne), { concurrency: "unbounded" });
-      return bodies
-        .filter((body): body is string => !!body)
-        .map((body) => body.trim())
-        .join("\n\n");
-    }),
+  compose: Effect.fnUntraced(function* (keys: ReadonlyArray<string>) {
+    if (keys.length === 0) return "";
+    const bodies = yield* Effect.all(keys.map(loadOne), { concurrency: "unbounded" });
+    return bodies
+      .filter((body): body is string => !!body)
+      .map((body) => body.trim())
+      .join("\n\n");
+  }),
 
   getById: (id) => skillById.get(id) ?? null,
 

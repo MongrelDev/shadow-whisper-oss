@@ -47,26 +47,17 @@ export const TextImproverServiceLive = Layer.effect(
     const generator = yield* TextGenerator;
 
     return {
-      improve: (params) =>
-        Effect.gen(function* () {
-          const category = params.bundleId
-            ? yield* appCategories
-                .resolve({ bundleId: params.bundleId, host: params.appHost })
-                .pipe(
-                  Effect.map((entry) => entry?.category ?? null),
-                  Effect.catch(() => Effect.succeed(null))
-                )
-            : null;
+      improve: Effect.fnUntraced(function* (params) {
+        const category = params.bundleId
+          ? yield* appCategories.resolve({ bundleId: params.bundleId, host: params.appHost }).pipe(
+              Effect.map((entry) => entry?.category ?? null),
+              Effect.catch(() => Effect.succeed(null))
+            )
+          : null;
 
-          const appOverlayKey = resolveAppOverlayKey(category, params.surfaceContext);
-          const [
-            appOverlay,
-            identity,
-            defaultCleanup,
-            executionPolicy,
-            intentPolicy,
-            lexiconPolicy,
-          ] = yield* Effect.all([
+        const appOverlayKey = resolveAppOverlayKey(category, params.surfaceContext);
+        const [appOverlay, identity, defaultCleanup, executionPolicy, intentPolicy, lexiconPolicy] =
+          yield* Effect.all([
             appOverlayKey
               ? skillLoader.load(appOverlayKey).pipe(
                   Effect.map((md) => md ?? ""),
@@ -80,54 +71,54 @@ export const TextImproverServiceLive = Layer.effect(
             loadRequiredHarnessDoc(skillLoader, LEXICON_POLICY_KEY),
           ]);
 
-          const contribution = yield* flowSelector.forParams(params).contribute({ category });
+        const contribution = yield* flowSelector.forParams(params).contribute({ category });
 
-          const sessionContext: SessionContext = {
-            surface: params.surface,
-            appCategory: category,
-            bundleId: params.bundleId,
-            appHost: params.appHost,
-            surfaceContext: params.surfaceContext,
-            spokenLanguage: params.detectedLanguage,
-            timezone: params.timezone,
-          };
+        const sessionContext: SessionContext = {
+          surface: params.surface,
+          appCategory: category,
+          bundleId: params.bundleId,
+          appHost: params.appHost,
+          surfaceContext: params.surfaceContext,
+          spokenLanguage: params.detectedLanguage,
+          timezone: params.timezone,
+        };
 
-          const system = buildSystemPrompt({
-            identity,
-            defaultCleanup,
-            executionPolicy,
-            intentPolicy,
-            lexiconPolicy,
-            sessionContext,
-            appOverlay,
-            directive: contribution.directive,
-          });
+        const system = buildSystemPrompt({
+          identity,
+          defaultCleanup,
+          executionPolicy,
+          intentPolicy,
+          lexiconPolicy,
+          sessionContext,
+          appOverlay,
+          directive: contribution.directive,
+        });
 
-          const [memory, dictionary] = yield* Effect.all([
-            memoryProvider
-              .snapshot({ userId: params.userId, category: "generic" })
-              .pipe(Effect.catch(() => Effect.succeed(EMPTY_MEMORY_CONTEXT))),
-            dictionaryRepository
-              .getDictionary(params.userId)
-              .pipe(Effect.catch(() => Effect.succeed({ words: [], snippets: [] }))),
-          ]);
+        const [memory, dictionary] = yield* Effect.all([
+          memoryProvider
+            .snapshot({ userId: params.userId, category: "generic" })
+            .pipe(Effect.catch(() => Effect.succeed(EMPTY_MEMORY_CONTEXT))),
+          dictionaryRepository
+            .getDictionary(params.userId)
+            .pipe(Effect.catch(() => Effect.succeed({ words: [], snippets: [] }))),
+        ]);
 
-          const prompt = buildUserMessage(
-            contribution.userHeader,
-            params.rawText,
-            memory,
-            dictionary.snippets
-          );
+        const prompt = buildUserMessage(
+          contribution.userHeader,
+          params.rawText,
+          memory,
+          dictionary.snippets
+        );
 
-          const text = yield* generator.generate({
-            userId: params.userId,
-            system,
-            prompt,
-            routing: contribution.routing,
-          });
+        const text = yield* generator.generate({
+          userId: params.userId,
+          system,
+          prompt,
+          routing: contribution.routing,
+        });
 
-          return sanitizeModelOutput(params.rawText, text);
-        }),
+        return sanitizeModelOutput(params.rawText, text);
+      }),
     };
   })
 );

@@ -88,64 +88,60 @@ export const UsageAnalyticsServiceLive = Layer.effect(
           Effect.map((items) => ({ items }))
         ),
 
-      getUsageInsights: (input) =>
-        Effect.gen(function* () {
-          const insights = yield* ledger
-            .getUsageInsights(input.userId, {
-              fromLocalDate: input.fromLocalDate,
-              toLocalDate: input.toLocalDate,
-            })
-            .pipe(Effect.mapError(asLedgerError("getUsageInsights")));
-          return yield* resolveUsageInsights(
-            insights,
-            { from: input.fromLocalDate, to: input.toLocalDate },
-            registry
-          );
-        }),
+      getUsageInsights: Effect.fnUntraced(function* (input: GetUsageInsightsInput) {
+        const insights = yield* ledger
+          .getUsageInsights(input.userId, {
+            fromLocalDate: input.fromLocalDate,
+            toLocalDate: input.toLocalDate,
+          })
+          .pipe(Effect.mapError(asLedgerError("getUsageInsights")));
+        return yield* resolveUsageInsights(
+          insights,
+          { from: input.fromLocalDate, to: input.toLocalDate },
+          registry
+        );
+      }),
 
-      getDailyBreakdown: (input) =>
-        Effect.gen(function* () {
-          const rows = yield* ledger
-            .getDailyBreakdown(input.userId, input.fromLocalDate, input.toLocalDate)
-            .pipe(Effect.mapError(asLedgerError("getDailyBreakdown")));
-          return yield* resolveDailyBreakdownItems(rows, registry);
-        }),
+      getDailyBreakdown: Effect.fnUntraced(function* (input: GetDailyBreakdownInput) {
+        const rows = yield* ledger
+          .getDailyBreakdown(input.userId, input.fromLocalDate, input.toLocalDate)
+          .pipe(Effect.mapError(asLedgerError("getDailyBreakdown")));
+        return yield* resolveDailyBreakdownItems(rows, registry);
+      }),
 
-      getUserStats: (input) =>
-        Effect.gen(function* () {
-          const [stats, achievements, milestones] = yield* Effect.all(
-            [
-              ledger.getUserStats(input.userId).pipe(Effect.mapError(asStatsError("getUserStats"))),
-              ledger
-                .getAchievementsWithProgress(input.userId)
-                .pipe(Effect.mapError(asLedgerError("getAchievements"))),
-              ledger
-                .getMilestonesWithProgress(input.userId)
-                .pipe(Effect.mapError(asLedgerError("getMilestones"))),
-            ],
-            { concurrency: "unbounded" }
-          );
-          return { ...stats, achievements, milestones };
-        }),
+      getUserStats: Effect.fnUntraced(function* (input: GetUserStatsInput) {
+        const [stats, achievements, milestones] = yield* Effect.all(
+          [
+            ledger.getUserStats(input.userId).pipe(Effect.mapError(asStatsError("getUserStats"))),
+            ledger
+              .getAchievementsWithProgress(input.userId)
+              .pipe(Effect.mapError(asLedgerError("getAchievements"))),
+            ledger
+              .getMilestonesWithProgress(input.userId)
+              .pipe(Effect.mapError(asLedgerError("getMilestones"))),
+          ],
+          { concurrency: "unbounded" }
+        );
+        return { ...stats, achievements, milestones };
+      }),
 
-      getShareCardStats: (input) =>
-        Effect.gen(function* () {
-          const [stats, achievements, milestones] = yield* Effect.all(
-            [
-              ledger
-                .getShareCardStats(input.userId)
-                .pipe(Effect.mapError(asStatsError("getShareCardStats"))),
-              ledger
-                .getAchievementsWithProgress(input.userId)
-                .pipe(Effect.mapError(asLedgerError("getAchievements"))),
-              ledger
-                .getMilestonesWithProgress(input.userId)
-                .pipe(Effect.mapError(asLedgerError("getMilestones"))),
-            ],
-            { concurrency: "unbounded" }
-          );
-          return { ...stats, achievements, milestones };
-        }),
+      getShareCardStats: Effect.fnUntraced(function* (input: GetShareCardStatsInput) {
+        const [stats, achievements, milestones] = yield* Effect.all(
+          [
+            ledger
+              .getShareCardStats(input.userId)
+              .pipe(Effect.mapError(asStatsError("getShareCardStats"))),
+            ledger
+              .getAchievementsWithProgress(input.userId)
+              .pipe(Effect.mapError(asLedgerError("getAchievements"))),
+            ledger
+              .getMilestonesWithProgress(input.userId)
+              .pipe(Effect.mapError(asLedgerError("getMilestones"))),
+          ],
+          { concurrency: "unbounded" }
+        );
+        return { ...stats, achievements, milestones };
+      }),
     });
   })
 );

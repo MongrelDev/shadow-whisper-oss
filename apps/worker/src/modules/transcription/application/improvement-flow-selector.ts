@@ -39,23 +39,22 @@ const makeVoiceSkillsFlow = (
   officialSkills: SkillRepositoryService,
   params: VoiceSkillsParams
 ): ImprovementFlow => ({
-  contribute: (ctx) =>
-    Effect.gen(function* () {
-      const installed = yield* skillInstallations.listInstalled(params.userId).pipe(
-        Effect.map((skills) => withOfficialTriggers(skills, officialSkills)),
-        Effect.catch(() => Effect.succeed([] as InstalledSkillSummary[]))
-      );
+  contribute: Effect.fnUntraced(function* (ctx) {
+    const installed = yield* skillInstallations.listInstalled(params.userId).pipe(
+      Effect.map((skills) => withOfficialTriggers(skills, officialSkills)),
+      Effect.catch(() => Effect.succeed([] as InstalledSkillSummary[]))
+    );
 
-      return {
-        directive: buildIntentRouterSection(
-          TRANSCRIPT_OPERATIONS,
-          installed,
-          suggestedOperationForCategory(ctx.category)
-        ),
-        userHeader: VOICE_SKILLS_HEADER,
-        routing: { operations: TRANSCRIPT_OPERATIONS, installed },
-      };
-    }),
+    return {
+      directive: buildIntentRouterSection(
+        TRANSCRIPT_OPERATIONS,
+        installed,
+        suggestedOperationForCategory(ctx.category)
+      ),
+      userHeader: VOICE_SKILLS_HEADER,
+      routing: { operations: TRANSCRIPT_OPERATIONS, installed },
+    };
+  }),
 });
 
 // Forced-skill flow: a single mandatory skill, no intent router and no tool catalog.

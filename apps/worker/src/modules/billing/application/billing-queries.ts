@@ -24,29 +24,28 @@ export const BillingQueriesLive = Layer.effect(
       Effect.tapError(effect, (error) => obs.failWideEvent(error));
 
     return BillingQueries.of({
-      getStatus: (input) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({ "billing.operation": "status" });
-          const status = yield* subscriptions.getStatus(input.userId);
+      getStatus: Effect.fnUntraced(function* (input: { userId: string }) {
+        yield* obs.setWideEvent({ "billing.operation": "status" });
+        const status = yield* subscriptions.getStatus(input.userId);
 
-          yield* obs.setWideEvent({
-            plan: status.plan,
-            subscriptionStatus: status.status,
-            hasTrialEnd: status.trialEnd !== null,
-            cancelAtPeriodEnd: status.cancelAtPeriodEnd,
-          });
+        yield* obs.setWideEvent({
+          plan: status.plan,
+          subscriptionStatus: status.status,
+          hasTrialEnd: status.trialEnd !== null,
+          cancelAtPeriodEnd: status.cancelAtPeriodEnd,
+        });
 
-          return {
-            plan: status.plan,
-            status: status.status,
-            displayStatus: status.displayStatus,
-            trialEnd: status.trialEnd,
-            currentPeriodEnd: status.currentPeriodEnd,
-            cancelAtPeriodEnd: status.cancelAtPeriodEnd,
-            canceledAt: status.canceledAt,
-            usage: status.usage,
-          } satisfies SubscriptionStatusResponse;
-        }).pipe(captureError),
+        return {
+          plan: status.plan,
+          status: status.status,
+          displayStatus: status.displayStatus,
+          trialEnd: status.trialEnd,
+          currentPeriodEnd: status.currentPeriodEnd,
+          cancelAtPeriodEnd: status.cancelAtPeriodEnd,
+          canceledAt: status.canceledAt,
+          usage: status.usage,
+        } satisfies SubscriptionStatusResponse;
+      }, captureError),
     });
   })
 );

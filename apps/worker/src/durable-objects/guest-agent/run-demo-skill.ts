@@ -12,32 +12,31 @@ export interface DemoSkillInput {
   readonly gatewayMetadata?: Readonly<Record<string, string>>;
 }
 
-export const runDemoSkill = (input: DemoSkillInput) =>
-  Effect.gen(function* () {
-    const trimmed = input.rawText.trim();
-    if (!trimmed) return { ok: false as const, reason: "empty_input" as const };
+export const runDemoSkill = Effect.fnUntraced(function* (input: DemoSkillInput) {
+  const trimmed = input.rawText.trim();
+  if (!trimmed) return { ok: false as const, reason: "empty_input" as const };
 
-    const loader = yield* SkillRepository;
-    const executor = yield* SkillExecutor;
+  const loader = yield* SkillRepository;
+  const executor = yield* SkillExecutor;
 
-    const skillBody = yield* loader
-      .compose(input.skillKeys)
-      .pipe(Effect.withSpan("do.skill-compose"));
+  const skillBody = yield* loader
+    .compose(input.skillKeys)
+    .pipe(Effect.withSpan("do.skill-compose"));
 
-    const cleanText = yield* executor
-      .execute({
-        skillMarkdown: skillBody,
-        inputText: trimmed,
-        ...(input.gatewayMetadata ? { gatewayMetadata: input.gatewayMetadata } : {}),
+  const cleanText = yield* executor
+    .execute({
+      skillMarkdown: skillBody,
+      inputText: trimmed,
+      ...(input.gatewayMetadata ? { gatewayMetadata: input.gatewayMetadata } : {}),
+    })
+    .pipe(
+      Effect.withSpan("do.skill-execute", {
+        attributes: {
+          "skill.keys": input.skillKeys.join(","),
+          "input.length": trimmed.length,
+        },
       })
-      .pipe(
-        Effect.withSpan("do.skill-execute", {
-          attributes: {
-            "skill.keys": input.skillKeys.join(","),
-            "input.length": trimmed.length,
-          },
-        })
-      );
+    );
 
-    return { ok: true as const, cleanText };
-  });
+  return { ok: true as const, cleanText };
+});

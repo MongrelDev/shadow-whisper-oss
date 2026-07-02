@@ -34,24 +34,26 @@ const collectIdentifierKeys = (rows: ReadonlyArray<DailyBreakdownRow>): Readonly
   return Array.from(set);
 };
 
-const resolveIdentifiers = (registry: AppCategoryRepositoryService, keys: ReadonlyArray<string>) =>
-  Effect.gen(function* () {
-    const resolved = new Map<string, AppRegistryEntry | null>();
-    yield* Effect.forEach(
-      keys,
-      (key) =>
-        Effect.gen(function* () {
-          const [bundle, host] = key.split("\n");
-          const hit = yield* registry.resolve({
-            bundleId: bundle ?? "",
-            host: host && host.length > 0 ? host : null,
-          });
-          resolved.set(key, hit);
-        }),
-      { concurrency: 10 }
-    );
-    return resolved;
-  });
+const resolveIdentifiers = Effect.fnUntraced(function* (
+  registry: AppCategoryRepositoryService,
+  keys: ReadonlyArray<string>
+) {
+  const resolved = new Map<string, AppRegistryEntry | null>();
+  yield* Effect.forEach(
+    keys,
+    (key) =>
+      Effect.gen(function* () {
+        const [bundle, host] = key.split("\n");
+        const hit = yield* registry.resolve({
+          bundleId: bundle ?? "",
+          host: host && host.length > 0 ? host : null,
+        });
+        resolved.set(key, hit);
+      }),
+    { concurrency: 10 }
+  );
+  return resolved;
+});
 
 const mergeKeyFor = (row: DailyBreakdownRow, hit: AppRegistryEntry | null): string => {
   if (hit) {
@@ -89,18 +91,17 @@ const accumulate = (
   });
 };
 
-export const resolveDailyBreakdownItems = (
+export const resolveDailyBreakdownItems = Effect.fnUntraced(function* (
   rows: ReadonlyArray<DailyBreakdownRow>,
   registry: AppCategoryRepositoryService
-) =>
-  Effect.gen(function* () {
-    const keys = collectIdentifierKeys(rows);
-    const resolved = yield* resolveIdentifiers(registry, keys);
-    const merged = new Map<string, DailyBreakdownItem>();
-    for (const row of rows) {
-      const key = identifierKeyOf(row);
-      const hit = key ? (resolved.get(key) ?? null) : null;
-      accumulate(merged, row, hit);
-    }
-    return Array.from(merged.values()) as ReadonlyArray<DailyBreakdownItem>;
-  });
+) {
+  const keys = collectIdentifierKeys(rows);
+  const resolved = yield* resolveIdentifiers(registry, keys);
+  const merged = new Map<string, DailyBreakdownItem>();
+  for (const row of rows) {
+    const key = identifierKeyOf(row);
+    const hit = key ? (resolved.get(key) ?? null) : null;
+    accumulate(merged, row, hit);
+  }
+  return Array.from(merged.values()) as ReadonlyArray<DailyBreakdownItem>;
+});

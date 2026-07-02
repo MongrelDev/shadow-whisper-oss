@@ -91,37 +91,35 @@ export const SubscriptionServiceLive = Layer.effect(
       );
 
     return SubscriptionService.of({
-      checkLimits: (userId) =>
-        Effect.gen(function* () {
-          const { plan } = yield* getPlan(userId);
+      checkLimits: Effect.fnUntraced(function* (userId: string) {
+        const { plan } = yield* getPlan(userId);
 
-          if (plan === "pro") {
-            return {
-              usage: { spokenWords: 0, transformedWords: 0, totalWords: 0 },
-              plan,
-              limit: Infinity,
-            };
-          }
+        if (plan === "pro") {
+          return {
+            usage: { spokenWords: 0, transformedWords: 0, totalWords: 0 },
+            plan,
+            limit: Infinity,
+          };
+        }
 
-          const usage = yield* usageReader.getCurrentWeeklyUsage(userId);
-          const limit = PLAN_WORD_LIMITS[plan];
+        const usage = yield* usageReader.getCurrentWeeklyUsage(userId);
+        const limit = PLAN_WORD_LIMITS[plan];
 
-          if (usage.totalWords >= limit) {
-            return yield* new LimitExceededError({
-              message: "Weekly word limit reached",
-              usage: { totalWords: usage.totalWords, limit },
-            });
-          }
+        if (usage.totalWords >= limit) {
+          return yield* new LimitExceededError({
+            message: "Weekly word limit reached",
+            usage: { totalWords: usage.totalWords, limit },
+          });
+        }
 
-          return { usage, plan, limit };
-        }),
+        return { usage, plan, limit };
+      }),
 
-      getStatus: (userId) =>
-        Effect.gen(function* () {
-          const row = yield* repository.findLatestByReferenceId(userId);
-          const usage = yield* usageReader.getCurrentWeeklyUsage(userId);
-          return buildSubscriptionStatus(row, usage);
-        }),
+      getStatus: Effect.fnUntraced(function* (userId: string) {
+        const row = yield* repository.findLatestByReferenceId(userId);
+        const usage = yield* usageReader.getCurrentWeeklyUsage(userId);
+        return buildSubscriptionStatus(row, usage);
+      }),
     });
   })
 );

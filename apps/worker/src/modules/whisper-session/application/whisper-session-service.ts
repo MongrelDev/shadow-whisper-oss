@@ -41,51 +41,50 @@ export const WhisperSessionServiceLive = Layer.effect(
       Effect.tapError(effect, (error) => obs.failWideEvent(error));
 
     return WhisperSessionService.of({
-      warmupSession: (input) =>
-        Effect.gen(function* () {
-          yield* obs.setWideEvent({
-            "session.operation": "warmup",
-            userId: input.userId,
-            hasMeta: input.warmupMetadata !== undefined,
-          });
+      warmupSession: Effect.fnUntraced(function* (input) {
+        yield* obs.setWideEvent({
+          "session.operation": "warmup",
+          userId: input.userId,
+          hasMeta: input.warmupMetadata !== undefined,
+        });
 
-          const limitStatus = yield* sub.checkLimits(input.userId).pipe(
-            Effect.tapError(() => obs.setWideEvent({ quotaCheckStep: "warmup" })),
-            Effect.catchTags({
-              BillingDatabaseError: (e) =>
-                new WarmupError({ message: `billing_error: ${e.message}` }),
-              UnknownError: (e) =>
-                new WarmupError({ message: `billing_unknown: ${String(e.cause)}` }),
-            })
-          );
+        const limitStatus = yield* sub.checkLimits(input.userId).pipe(
+          Effect.tapError(() => obs.setWideEvent({ quotaCheckStep: "warmup" })),
+          Effect.catchTags({
+            BillingDatabaseError: (e) =>
+              new WarmupError({ message: `billing_error: ${e.message}` }),
+            UnknownError: (e) =>
+              new WarmupError({ message: `billing_unknown: ${String(e.cause)}` }),
+          })
+        );
 
-          yield* obs.setWideEvent({
-            quotaUsedWords: limitStatus.usage.totalWords,
-            quotaLimit: limitStatus.limit,
-          });
+        yield* obs.setWideEvent({
+          quotaUsedWords: limitStatus.usage.totalWords,
+          quotaLimit: limitStatus.limit,
+        });
 
-          const exp = Math.floor(Date.now() / 1000) + SESSION_TOKEN_TTL_SECONDS;
-          const sessionId = yield* signer.sign({
-            uid: input.userId,
-            purpose: AUTHENTICATED_WARMUP_PURPOSE,
-            exp,
-          });
+        const exp = Math.floor(Date.now() / 1000) + SESSION_TOKEN_TTL_SECONDS;
+        const sessionId = yield* signer.sign({
+          uid: input.userId,
+          purpose: AUTHENTICATED_WARMUP_PURPOSE,
+          exp,
+        });
 
-          const metaWithSessionId: WarmupMetadata = input.warmupMetadata
-            ? { ...input.warmupMetadata, sessionId }
-            : { ...EMPTY_WARMUP_METADATA, sessionId, subjectId: input.userId };
+        const metaWithSessionId: WarmupMetadata = input.warmupMetadata
+          ? { ...input.warmupMetadata, sessionId }
+          : { ...EMPTY_WARMUP_METADATA, sessionId, subjectId: input.userId };
 
-          yield* agentSession.registerSession({
-            userId: input.userId,
-            sessionId,
-            metadata: metaWithSessionId,
-            startedAt: Date.now(),
-          });
+        yield* agentSession.registerSession({
+          userId: input.userId,
+          sessionId,
+          metadata: metaWithSessionId,
+          startedAt: Date.now(),
+        });
 
-          yield* obs.setWideEvent({ warmupCompleted: true });
+        yield* obs.setWideEvent({ warmupCompleted: true });
 
-          return { sessionId } satisfies WarmupSessionResult;
-        }).pipe(captureError),
+        return { sessionId } satisfies WarmupSessionResult;
+      }, captureError),
     });
   })
 );

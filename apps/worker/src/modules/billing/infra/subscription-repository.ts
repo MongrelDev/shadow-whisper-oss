@@ -24,54 +24,52 @@ const decodeLatestRow = Schema.decodeUnknownSync(NullableLatestSubscriptionFromR
 export const makeDrizzleSubscriptionRepository = (
   db: DrizzleDatabase
 ): SubscriptionRepositoryService => ({
-  findCurrentByReferenceId: (referenceId) =>
-    Effect.gen(function* () {
-      const now = new Date();
+  findCurrentByReferenceId: Effect.fnUntraced(function* (referenceId) {
+    const now = new Date();
 
-      const rows = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select({
-              plan: subscription.plan,
-              status: subscription.status,
-              trialEnd: subscription.trialEnd,
-              currentPeriodEnd: subscription.periodEnd,
-            })
-            .from(subscription)
-            .where(
-              and(
-                eq(subscription.referenceId, referenceId),
-                inArray(subscription.status, ["active", "trialing"]),
-                or(isNull(subscription.trialEnd), gt(subscription.trialEnd, now))
-              )
+    const rows = yield* Effect.tryPromise({
+      try: () =>
+        db
+          .select({
+            plan: subscription.plan,
+            status: subscription.status,
+            trialEnd: subscription.trialEnd,
+            currentPeriodEnd: subscription.periodEnd,
+          })
+          .from(subscription)
+          .where(
+            and(
+              eq(subscription.referenceId, referenceId),
+              inArray(subscription.status, ["active", "trialing"]),
+              or(isNull(subscription.trialEnd), gt(subscription.trialEnd, now))
             )
-            .limit(1),
-        catch: (e) => new BillingDatabaseError({ message: unknownMessage(e) }),
-      });
+          )
+          .limit(1),
+      catch: (e) => new BillingDatabaseError({ message: unknownMessage(e) }),
+    });
 
-      return decodeCurrentRow(rows[0]);
-    }),
+    return decodeCurrentRow(rows[0]);
+  }),
 
-  findLatestByReferenceId: (referenceId) =>
-    Effect.gen(function* () {
-      const rows = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select({
-              plan: subscription.plan,
-              status: subscription.status,
-              trialEnd: subscription.trialEnd,
-              currentPeriodEnd: subscription.periodEnd,
-              cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-              canceledAt: subscription.canceledAt,
-            })
-            .from(subscription)
-            .where(eq(subscription.referenceId, referenceId))
-            .orderBy(desc(subscription.periodEnd))
-            .limit(1),
-        catch: (e) => new BillingDatabaseError({ message: unknownMessage(e) }),
-      });
+  findLatestByReferenceId: Effect.fnUntraced(function* (referenceId) {
+    const rows = yield* Effect.tryPromise({
+      try: () =>
+        db
+          .select({
+            plan: subscription.plan,
+            status: subscription.status,
+            trialEnd: subscription.trialEnd,
+            currentPeriodEnd: subscription.periodEnd,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            canceledAt: subscription.canceledAt,
+          })
+          .from(subscription)
+          .where(eq(subscription.referenceId, referenceId))
+          .orderBy(desc(subscription.periodEnd))
+          .limit(1),
+      catch: (e) => new BillingDatabaseError({ message: unknownMessage(e) }),
+    });
 
-      return decodeLatestRow(rows[0]);
-    }),
+    return decodeLatestRow(rows[0]);
+  }),
 });

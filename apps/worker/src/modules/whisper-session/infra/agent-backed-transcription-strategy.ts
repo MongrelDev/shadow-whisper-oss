@@ -10,8 +10,8 @@ import { TranscriptionFailedError } from "../errors";
 // forwards the already-authorized session to the user's WhisperAgent over Durable
 // Object RPC. Audio crosses as an ArrayBuffer; the agent never persists it.
 export const makeAgentBackedTranscriptionStrategy = (env: Env): TranscriptionStrategyService => ({
-  run: (input: TranscriptionInput) =>
-    Effect.gen(function* () {
+  run: Effect.fnUntraced(
+    function* (input: TranscriptionInput) {
       const audio = yield* Effect.tryPromise({
         try: () => input.audio.arrayBuffer(),
         catch: (e) => new TranscriptionFailedError({ message: `audio_read_failed: ${String(e)}` }),
@@ -59,13 +59,16 @@ export const makeAgentBackedTranscriptionStrategy = (env: Env): TranscriptionStr
           durationMs: result.durationMs,
         },
       } satisfies TranscriptionOutcome;
-    }).pipe(
-      Effect.withSpan("transcription.agent-rpc", {
-        attributes: {
-          "session.userId": input.userId,
-          "session.mode": input._tag,
-          "audio.contentType": input.contentType,
-        },
-      })
-    ),
+    },
+    (eff, input) =>
+      eff.pipe(
+        Effect.withSpan("transcription.agent-rpc", {
+          attributes: {
+            "session.userId": input.userId,
+            "session.mode": input._tag,
+            "audio.contentType": input.contentType,
+          },
+        })
+      )
+  ),
 });

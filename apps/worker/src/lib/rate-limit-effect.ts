@@ -33,21 +33,23 @@ export const makeCloudflareRateLimiter = (env: Env): RateLimiterService => ({
     }),
 });
 
-export const enforceUserRateLimit = (label: string, bindings: readonly RateLimitBindingName[]) =>
-  Effect.gen(function* () {
-    const limiter = yield* RateLimiter;
-    const userId = yield* currentUserId;
-    for (const binding of bindings) {
-      const success = yield* limiter
-        .check(binding, `user:${userId}:${label}`)
-        .pipe(
-          Effect.catchTag("RateLimitCheckError", (e) =>
-            Effect.logError("rate limiter check failed, failing open", e).pipe(Effect.as(true))
-          )
-        );
-      if (!success) {
-        yield* enrichWideEvent({ rateLimit: { exceeded: true, binding, label } });
-        return yield* new RateLimitedError({ label });
-      }
+export const enforceUserRateLimit = Effect.fnUntraced(function* (
+  label: string,
+  bindings: readonly RateLimitBindingName[]
+) {
+  const limiter = yield* RateLimiter;
+  const userId = yield* currentUserId;
+  for (const binding of bindings) {
+    const success = yield* limiter
+      .check(binding, `user:${userId}:${label}`)
+      .pipe(
+        Effect.catchTag("RateLimitCheckError", (e) =>
+          Effect.logError("rate limiter check failed, failing open", e).pipe(Effect.as(true))
+        )
+      );
+    if (!success) {
+      yield* enrichWideEvent({ rateLimit: { exceeded: true, binding, label } });
+      return yield* new RateLimitedError({ label });
     }
-  });
+  }
+});

@@ -27,8 +27,8 @@ export const FeedbackServiceLive = Layer.effect(
     const client = yield* TeachWorkflowClient;
 
     return FeedbackService.of({
-      ingestTeach: (input) =>
-        Effect.gen(function* () {
+      ingestTeach: Effect.fnUntraced(
+        function* (input: IngestTeachInput) {
           yield* obs.setWideEvent({
             "feedback.operation": "teach_ingest",
             "feedback.source": input.source,
@@ -72,7 +72,9 @@ export const FeedbackServiceLive = Layer.effect(
             workflowInstancePresent: result.instanceId !== null,
           });
           return result;
-        }).pipe(Effect.tapError((error) => obs.failWideEvent(error))),
+        },
+        (eff) => eff.pipe(Effect.tapError((error) => obs.failWideEvent(error)))
+      ),
     });
   })
 );
