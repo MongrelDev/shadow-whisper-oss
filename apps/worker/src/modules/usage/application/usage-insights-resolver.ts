@@ -1,6 +1,5 @@
 import { Effect } from "effect";
 import type { AppCategoryRepositoryService } from "../../transcription/application/ports/app-category-repository";
-import type { AppRegistryEntry } from "../../transcription/domain/app-category";
 import type { UsageInsights } from "./usage-ledger-operations";
 import type { InsightAppItem, InsightCategoryItem, UsageInsightsResponse } from "../schemas";
 import {
@@ -8,50 +7,13 @@ import {
   OUTROS_HOST_NAME,
   UNCATEGORIZED_CATEGORY,
 } from "../domain/usage-analytics";
+import {
+  collectIdentifierKeys,
+  identifierKeyOf,
+  resolveIdentifiers,
+} from "./app-identifier-resolution";
 
 const TOP_APPS_LIMIT = 10;
-
-interface AppAggregate {
-  readonly bundleId: string | null;
-  readonly siteHost: string | null;
-  readonly wordCount: number;
-  readonly durationMs: number;
-  readonly entryCount: number;
-}
-
-const normalize = (value: string | null): string | null => {
-  if (!value) return null;
-  const trimmed = value.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const identifierKeyOf = (row: AppAggregate): string | null => {
-  const host = normalize(row.siteHost);
-  const bundle = normalize(row.bundleId);
-  if (!host && !bundle) return null;
-  return `${bundle ?? ""}\n${host ?? ""}`;
-};
-
-const resolveIdentifiers = Effect.fnUntraced(function* (
-  registry: AppCategoryRepositoryService,
-  keys: ReadonlyArray<string>
-) {
-  const resolved = new Map<string, AppRegistryEntry | null>();
-  yield* Effect.forEach(
-    keys,
-    (key) =>
-      Effect.gen(function* () {
-        const [bundle, host] = key.split("\n");
-        const hit = yield* registry.resolve({
-          bundleId: bundle ?? "",
-          host: host && host.length > 0 ? host : null,
-        });
-        resolved.set(key, hit);
-      }),
-    { concurrency: 10 }
-  );
-  return resolved;
-});
 
 const pctOf = (part: number, whole: number): number =>
   whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0;
@@ -64,7 +26,7 @@ interface MutableAggregate {
 const accumulateInto = (
   acc: Map<string, MutableAggregate>,
   key: string,
-  row: AppAggregate
+  row: UsageInsights["apps"][number]
 ): void => {
   const existing = acc.get(key) ?? { wordCount: 0, entryCount: 0 };
   existing.wordCount += row.wordCount;
@@ -77,9 +39,7 @@ export const resolveUsageInsights = Effect.fnUntraced(function* (
   range: { from: string | null; to: string | null },
   registry: AppCategoryRepositoryService
 ) {
-  const keys = Array.from(
-    new Set(insights.apps.flatMap((row) => (identifierKeyOf(row) ? [identifierKeyOf(row)!] : [])))
-  );
+  const keys = collectIdentifierKeys(insights.apps);
   const resolved = yield* resolveIdentifiers(registry, keys);
 
   const byCategory = new Map<string, MutableAggregate>();

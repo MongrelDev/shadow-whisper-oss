@@ -2,7 +2,7 @@ import { Context, Effect, Layer } from "effect";
 import type { Dictionary, DictionaryWord, Snippet } from "../domain/dictionary";
 import type { DictionaryRepositoryError } from "../errors";
 import { DictionaryRepository } from "./ports/dictionary-repository";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 
 export interface DictionaryServiceShape {
   readonly getDictionary: (userId: string) => Effect.Effect<Dictionary, DictionaryRepositoryError>;
@@ -34,8 +34,7 @@ export const DictionaryServiceLive = Layer.effect(
   Effect.gen(function* () {
     const dictionary = yield* DictionaryRepository;
     const obs = yield* Observability;
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     return DictionaryService.of({
       getDictionary: Effect.fnUntraced(function* (userId: string) {

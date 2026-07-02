@@ -72,3 +72,13 @@ export const captureWideEventError = <A, E, R>(
   Effect.tapError(effect, (error) =>
     Effect.flatMap(Observability, (obs) => obs.failWideEvent(error))
   );
+
+/**
+ * Closure-based variant of {@link captureWideEventError} for services that
+ * resolve Observability once at layer construction. Keeps the method's `R`
+ * channel free of Observability so port interfaces stay `R = never`.
+ */
+export const captureErrorWith =
+  (obs: ObservabilityService) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+    Effect.tapError(effect, (error) => obs.failWideEvent(error));

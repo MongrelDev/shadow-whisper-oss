@@ -1,5 +1,5 @@
 import { Agent, callable } from "agents";
-import { Context, Effect, Layer, Tracer } from "effect";
+import { Cause, Context, Effect, Exit, Layer, Option, Tracer } from "effect";
 import { INITIAL_GUEST_STATE, type GuestState } from "./state";
 import { makeDemoSkillExecutorLayer } from "./infra/live";
 import { runDemoSkill, type ProcessDemoSkillResult } from "./run-demo-skill";
@@ -50,8 +50,19 @@ export class GuestAgent extends Agent<Env, GuestState> {
       ? pipeline.pipe(Effect.provideService(Tracer.ParentSpan, externalSpan))
       : pipeline;
 
-    return Effect.runPromise(
+    const exit = await Effect.runPromiseExit(
       effect.pipe(Effect.provide(Layer.mergeAll(this.getLayer(), OtlpTracingLive(this.env))))
     );
+
+    return Exit.match(exit, {
+      onSuccess: (result) => result,
+      onFailure: (cause) => {
+        Effect.runFork(Effect.logError("guest-agent.process-demo-skill failed", cause));
+        // Rethrow the typed failure (preserving its tag) or wrap a defect so
+        // the RPC caller never receives an opaque FiberFailure.
+        const failure = Cause.findErrorOption(cause);
+        throw Option.getOrElse(failure, () => new Error(Cause.pretty(cause)));
+      },
+    });
   }
 }

@@ -1,10 +1,42 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { Effect, Layer } from "effect";
+import { Cause, Effect, Exit, Layer } from "effect";
 import { AutoEditValidator } from "../modules/feedback/application/ports/auto-edit-validator";
 import { PendingSuggestionsRepository } from "../modules/feedback/application/ports/pending-suggestions-repository";
 import { makeWorkersAiAutoEditValidator } from "../modules/feedback/infra/workers-ai-auto-edit-validator";
 import { PendingSuggestionsRepositoryLive } from "../modules/feedback/infra/live";
 import { emitOneShotWideEvent } from "../observability/emit-one-shot-wide-event";
+import type { WideEventFields } from "../observability/wide-event";
+import type { OneShotWideEventOptions } from "../observability/emit-one-shot-wide-event";
+
+// Failures must surface as plain Errors so the Workflows runtime can retry the
+// step with a readable message instead of an opaque FiberFailure.
+const runStepEffect = async <A, E>(effect: Effect.Effect<A, E>): Promise<A> => {
+  const exit = await Effect.runPromiseExit(effect);
+  return Exit.match(exit, {
+    onSuccess: (value) => value,
+    onFailure: (cause) => {
+      Effect.runFork(Effect.logError("TeachAnalysisWorkflow step failed", cause));
+      throw new Error(Cause.pretty(cause));
+    },
+  });
+};
+
+// Observability is best-effort: a failed emission must not fail (and re-run)
+// the whole step.
+const emitBestEffort = async (
+  env: Env,
+  name: string,
+  fields: WideEventFields,
+  options?: OneShotWideEventOptions
+): Promise<void> => {
+  const exit = await Effect.runPromiseExit(emitOneShotWideEvent(env, name, fields, options));
+  Exit.match(exit, {
+    onSuccess: () => undefined,
+    onFailure: (cause) => {
+      Effect.runFork(Effect.logError("TeachAnalysisWorkflow wide event emission failed", cause));
+    },
+  });
+};
 
 export interface TeachAnalysisWorkflowOptions {
   readonly autoEditValidatorLayer?: Layer.Layer<AutoEditValidator>;
@@ -53,7 +85,7 @@ export class TeachAnalysisWorkflow extends WorkflowEntrypoint<Env, TeachAnalysis
   ): Promise<AcceptedPair[]> {
     return step.do("auto-edit-validate", async () => {
       const startedAt = Date.now();
-      const result = await Effect.runPromise(
+      const result = await runStepEffect(
         Effect.gen(function* () {
           const validator = yield* AutoEditValidator;
           return yield* validator.validate({
@@ -69,14 +101,12 @@ export class TeachAnalysisWorkflow extends WorkflowEntrypoint<Env, TeachAnalysis
         )
       );
       const latencyMs = Date.now() - startedAt;
-      await Effect.runPromise(
-        emitOneShotWideEvent(this.env, "auto_teach.validated", {
-          feedback_id: feedbackId,
-          candidates_received: candidates.length,
-          candidates_accepted: result.accepted.length,
-          latency_ms: latencyMs,
-        })
-      );
+      await emitBestEffort(this.env, "auto_teach.validated", {
+        feedback_id: feedbackId,
+        candidates_received: candidates.length,
+        candidates_accepted: result.accepted.length,
+        latency_ms: latencyMs,
+      });
       return result.accepted.map((a) => ({ from: a.from, to: a.to, context: a.context }));
     });
   }
@@ -91,7 +121,7 @@ export class TeachAnalysisWorkflow extends WorkflowEntrypoint<Env, TeachAnalysis
   ): Promise<void> {
     await step.do("persist", async () => {
       const now = Date.now();
-      await Effect.runPromise(
+      await runStepEffect(
         Effect.gen(function* () {
           const repo = yield* PendingSuggestionsRepository;
           for (const pair of pairs) {
@@ -108,13 +138,11 @@ export class TeachAnalysisWorkflow extends WorkflowEntrypoint<Env, TeachAnalysis
           }
         }).pipe(Effect.provide(PendingSuggestionsRepositoryLive(this.env)))
       );
-      await Effect.runPromise(
-        emitOneShotWideEvent(this.env, "auto_teach.persisted", {
-          feedback_id: feedbackId,
-          pairs_persisted: pairs.length,
-          source,
-        })
-      );
+      await emitBestEffort(this.env, "auto_teach.persisted", {
+        feedback_id: feedbackId,
+        pairs_persisted: pairs.length,
+        source,
+      });
     });
   }
 
@@ -132,12 +160,10 @@ export class TeachAnalysisWorkflow extends WorkflowEntrypoint<Env, TeachAnalysis
 
     const skipReason = this.shouldSkip(event.payload);
     if (skipReason !== null) {
-      await Effect.runPromise(
-        emitOneShotWideEvent(this.env, "auto_teach.skipped", {
-          feedback_id: feedbackId,
-          reason: skipReason,
-        })
-      );
+      await emitBestEffort(this.env, "auto_teach.skipped", {
+        feedback_id: feedbackId,
+        reason: skipReason,
+      });
       return;
     }
 

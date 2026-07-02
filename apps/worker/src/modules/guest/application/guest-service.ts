@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { GuestSession } from "./ports/guest-session";
 import { GuestAgentIdentity } from "./ports/guest-agent-identity";
 import { GuestJobService } from "./ports/guest-job-service";
@@ -66,8 +66,7 @@ export const GuestServiceLive = Layer.effect(
     const jobs = yield* GuestJobService;
     const tokenSigner = yield* GuestSessionTokenSigner;
 
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     const verifyGuestSession = Effect.fnUntraced(function* (
       cookieHeader: string | null,

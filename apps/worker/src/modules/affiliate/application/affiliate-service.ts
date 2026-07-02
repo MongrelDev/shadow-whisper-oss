@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Schedule } from "effect";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { AffiliateProfileRepository } from "./ports/affiliate-profile-repository";
 import { ReferralRepository } from "./ports/referral-repository";
 import type { ReferralWithDetails } from "./ports/referral-repository";
@@ -146,8 +146,7 @@ export const AffiliateServiceLive = Layer.effect(
     const authSignup = yield* AuthSignup;
     const referralWriter = yield* ReferralWriter;
 
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     const checkEligibility = Effect.fnUntraced(function* (userId: string) {
       const billing = yield* userReader.getBillingProfile(userId);

@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { SubscriptionService } from "./subscription-service";
 import type { SubscriptionStatusResponse } from "../schemas";
 import type { BillingDatabaseError } from "../errors";
@@ -20,8 +20,7 @@ export const BillingQueriesLive = Layer.effect(
   Effect.gen(function* () {
     const subscriptions = yield* SubscriptionService;
     const obs = yield* Observability;
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     return BillingQueries.of({
       getStatus: Effect.fnUntraced(function* (input: { userId: string }) {

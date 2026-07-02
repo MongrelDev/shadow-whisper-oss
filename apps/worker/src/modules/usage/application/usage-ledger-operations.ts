@@ -4,6 +4,7 @@ import {
   ACHIEVEMENT_RULES,
   BILINGUAL_MIN_WORDS_PER_LANGUAGE,
   MILESTONE_KEYS,
+  SKILL_EXPLORER_THRESHOLD,
   computeLocalDateHour,
   computeStreak,
   computeWpm,
@@ -228,7 +229,7 @@ export const appendSkillUsage = Effect.fnUntraced(function* (row: SkillUsageRow)
 
   const reader = yield* SnapshotReader;
   const distinctSkills = yield* reader.distinctSkillsAllTime();
-  if (distinctSkills >= 3) {
+  if (distinctSkills >= SKILL_EXPLORER_THRESHOLD) {
     const badges = yield* BadgeStore;
     // @effect-diagnostics-next-line preferSchemaOverJson:off
     yield* badges.tryAward("skill_explorer", row.createdAt, JSON.stringify({ distinctSkills }));

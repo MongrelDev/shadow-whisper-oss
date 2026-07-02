@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 import { LimitExceededError } from "../../billing/errors";
 import { SubscriptionService } from "../../billing/application/subscription-service";
-import { Observability } from "../../../observability/observability";
+import { Observability, captureErrorWith } from "../../../observability/observability";
 import { SessionTokenSigner, AUTHENTICATED_WARMUP_PURPOSE } from "./ports/session-token-signer";
 import { WhisperAgentSession } from "./ports/whisper-agent-session";
 import { EMPTY_WARMUP_METADATA, type WarmupMetadata } from "../domain/warmup-metadata";
@@ -37,8 +37,7 @@ export const WhisperSessionServiceLive = Layer.effect(
     const signer = yield* SessionTokenSigner;
     const agentSession = yield* WhisperAgentSession;
 
-    const captureError = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-      Effect.tapError(effect, (error) => obs.failWideEvent(error));
+    const captureError = captureErrorWith(obs);
 
     return WhisperSessionService.of({
       warmupSession: Effect.fnUntraced(function* (input) {
