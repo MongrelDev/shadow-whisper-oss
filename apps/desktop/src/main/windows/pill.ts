@@ -139,6 +139,12 @@ export function sendPillBadgeUnlock(payload: BadgeUnlockPayload): void {
   }
 }
 
+export function sendPillActionModeStart(): void {
+  if (pillWindow && !pillWindow.isDestroyed()) {
+    pillWindow.webContents.send("action-mode:start");
+  }
+}
+
 export function sendPillRecordingStart(): void {
   if (pillWindow && !pillWindow.isDestroyed()) {
     pillWindow.webContents.send("recording:start");

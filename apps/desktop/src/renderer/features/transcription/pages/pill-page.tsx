@@ -13,6 +13,15 @@ import { CleanupDiffNudge } from "../components/cleanup-diff-nudge";
 import { usePillController } from "../hooks/use-pill-controller";
 import { useSkillDiscoveryNudge } from "../hooks/use-skill-discovery-nudge";
 import { RecordingSessionProvider } from "../providers/recording-session-provider";
+import {
+  ActionModeProvider,
+  useActionModeContext,
+} from "@/features/action-mode/providers/action-mode-provider";
+import {
+  ActionModeRecordingPill,
+  ActionModeProcessingPill,
+} from "@/features/action-mode/components/action-mode-pill";
+import type { UseActionModeSessionReturn } from "@/features/action-mode/hooks/use-action-mode-session";
 import type { FeedbackKind } from "../stores/pill-store";
 import { usePillBadgeUnlock } from "@/features/progress/pill/hooks/use-pill-badge-unlock";
 import { DiffPanel } from "../components/diff-panel";
@@ -23,9 +32,12 @@ type PillScene =
   | { type: "recording" }
   | { type: "transcribing" }
   | { type: "applying-skill" }
+  | { type: "action-recording" }
+  | { type: "action-processing" }
   | { type: "minimized" };
 
 type SessionPhase = ReturnType<typeof usePillController>["session"]["phase"];
+type ActionPhase = UseActionModeSessionReturn["phase"];
 type RouteView = ReturnType<typeof usePillController>["routeView"];
 
 function resolveSessionScene(phase: SessionPhase, routeView: RouteView): PillScene {
@@ -39,17 +51,46 @@ function resolvePillScene(input: {
   isApplyingSkill: boolean;
   feedback: FeedbackKind | null;
   phase: SessionPhase;
+  actionPhase: ActionPhase;
   routeView: RouteView;
 }): PillScene {
+  if (input.actionPhase === "recording") return { type: "action-recording" };
+  if (input.actionPhase === "processing") return { type: "action-processing" };
   if (input.isApplyingSkill) return { type: "applying-skill" };
   if (input.feedback) return { type: "feedback", feedback: input.feedback };
   return resolveSessionScene(input.phase, input.routeView);
 }
 
+function renderActionScene(
+  scene: PillScene,
+  actionSession: UseActionModeSessionReturn
+): React.ReactElement | null {
+  if (scene.type === "action-recording") {
+    return (
+      <ActionModeRecordingPill
+        key="action-recording"
+        isSpeaking={actionSession.isSpeaking}
+        volumeLevel={actionSession.volumeLevel}
+        waveformHistory={actionSession.waveformHistory}
+        onCancel={() => void actionSession.cancel()}
+        onStop={() => void actionSession.stop()}
+      />
+    );
+  }
+  if (scene.type === "action-processing") {
+    return <ActionModeProcessingPill key="action-processing" />;
+  }
+  return null;
+}
+
 function renderPillScene(
   scene: PillScene,
-  pill: ReturnType<typeof usePillController>
+  pill: ReturnType<typeof usePillController>,
+  actionSession: UseActionModeSessionReturn
 ): React.ReactElement {
+  const actionScene = renderActionScene(scene, actionSession);
+  if (actionScene) return actionScene;
+
   if (scene.type === "feedback") {
     return (
       <FeedbackScene
@@ -104,6 +145,7 @@ function renderPillSurface(args: {
   onDismiss: () => void;
   scene: PillScene;
   pill: ReturnType<typeof usePillController>;
+  actionSession: UseActionModeSessionReturn;
 }): React.ReactElement {
   if (args.showCleanupDiffNudge) {
     return (
@@ -124,7 +166,7 @@ function renderPillSurface(args: {
       />
     );
   }
-  return renderPillScene(args.scene, args.pill);
+  return renderPillScene(args.scene, args.pill, args.actionSession);
 }
 
 function usePillMousePassthrough(): {
@@ -214,6 +256,7 @@ function useCleanupDiffNudgeHandlers(): {
 
 function PillPageContent(): React.ReactElement {
   const pill = usePillController();
+  const { actionSession } = useActionModeContext();
   const isApplyingSkill = useSkillApplying();
   usePillBadgeUnlock();
   const passthrough = usePillMousePassthrough();
@@ -233,9 +276,10 @@ function PillPageContent(): React.ReactElement {
         isApplyingSkill,
         feedback: pill.feedback,
         phase: pill.session.phase,
+        actionPhase: actionSession.phase,
         routeView: pill.routeView,
       }),
-    [isApplyingSkill, pill.feedback, pill.routeView, pill.session.phase]
+    [actionSession.phase, isApplyingSkill, pill.feedback, pill.routeView, pill.session.phase]
   );
 
   const showCleanupDiffNudge =
@@ -269,6 +313,7 @@ function PillPageContent(): React.ReactElement {
             onDismiss,
             scene,
             pill,
+            actionSession,
           })}
         </AnimatePresence>
       </div>
@@ -358,7 +403,9 @@ function GenericFeedback({
 export function PillPage(): React.ReactElement {
   return (
     <RecordingSessionProvider>
-      <PillPageContent />
+      <ActionModeProvider>
+        <PillPageContent />
+      </ActionModeProvider>
     </RecordingSessionProvider>
   );
 }

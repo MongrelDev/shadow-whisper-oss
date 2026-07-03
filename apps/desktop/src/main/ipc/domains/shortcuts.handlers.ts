@@ -3,12 +3,13 @@ import { getShortcuts, setShortcut } from "../../services/ConfigStore";
 import { updateShortcut } from "../../services/HotkeyService";
 import { m } from "../../../renderer/paraglide/messages";
 
-type RebindableKey = "transcription" | "pasteLastTranscript" | "viewLastDiff";
+type RebindableKey = "transcription" | "pasteLastTranscript" | "viewLastDiff" | "actionMode";
 
 const REBINDABLE_KEYS: readonly RebindableKey[] = [
   "transcription",
   "pasteLastTranscript",
   "viewLastDiff",
+  "actionMode",
 ];
 
 function isRebindableKey(key: string): key is RebindableKey {

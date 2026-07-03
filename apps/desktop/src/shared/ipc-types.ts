@@ -281,6 +281,43 @@ export interface SessionAPI {
   onRewards: (callback: (payload: SessionRewardsPushPayload) => void) => () => void;
 }
 
+// ─── Action Mode ──────────────────────────────────────────────────────
+
+export type ActionModeFailureReason =
+  | "quota_exceeded"
+  | "unauthenticated"
+  | "network"
+  | "internal"
+  | "payload_too_large"
+  | "execution_failed"
+  | "rate_limited";
+
+export interface ActionModeExecuteIpcInput {
+  audioBuffer: ArrayBuffer;
+  contentType: string;
+  // `locale` is the STT language hint; `language` is the UI locale used for analytics.
+  locale?: string;
+  timezone: string;
+  language: string | null;
+}
+
+export type ActionModeExecuteIpcResult =
+  | {
+      ok: true;
+      outputText: string;
+      instructionText: string;
+      inserted: boolean;
+      notice?: string;
+    }
+  | { ok: false; reason: ActionModeFailureReason; message?: string };
+
+export interface ActionModeAPI {
+  execute: (input: ActionModeExecuteIpcInput) => Promise<ActionModeExecuteIpcResult>;
+  notifyStarted: () => void;
+  cancel: () => void;
+  onStart: (callback: () => void) => () => void;
+}
+
 export interface SuggestionsAPI {
   getPending: () => Promise<ApiResult<PendingSuggestionsListResponse>>;
   accept: (id: string) => Promise<ApiResult<{ success: true }>>;
@@ -441,6 +478,7 @@ export interface ElectronAPI {
   skills: SkillsAPI;
   skillBuilder: SkillBuilderAPI;
   session: SessionAPI;
+  actionMode: ActionModeAPI;
   suggestions: SuggestionsAPI;
   settings: SettingsAPI;
   app: AppAPI;

@@ -18,6 +18,7 @@ const ShortcutsSchema = z.object({
   pasteLastTranscript: z.string(),
   cancelRecording: z.string(),
   viewLastDiff: z.string().default("CommandOrControl+Alt+O"),
+  actionMode: z.string().default("CommandOrControl+Alt+A"),
 });
 
 const NudgeSkillDiscoverySchema = z.object({
@@ -128,6 +129,7 @@ const DEFAULTS: AppConfig = {
     pasteLastTranscript: "CommandOrControl+Alt+V",
     cancelRecording: "Escape",
     viewLastDiff: "CommandOrControl+Alt+O",
+    actionMode: "CommandOrControl+Alt+A",
   },
   preferences: {
     theme: "system",

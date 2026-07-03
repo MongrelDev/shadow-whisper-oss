@@ -96,6 +96,14 @@ const api: ElectronAPI = {
     onRewards: (cb) => onEvent("session:rewards", cb),
   },
 
+  // ─── Action Mode ────────────────────────────────────────────────────
+  actionMode: {
+    execute: (input) => ipcRenderer.invoke("action-mode:execute", input),
+    notifyStarted: () => ipcRenderer.send("action-mode:started"),
+    cancel: () => ipcRenderer.send("action-mode:cancel"),
+    onStart: (cb) => onEvent("action-mode:start", cb),
+  },
+
   // ─── Suggestions ────────────────────────────────────────────────────
   suggestions: {
     getPending: () => ipcRenderer.invoke("suggestions:get-pending"),

@@ -10,6 +10,7 @@ import { ShortcutsSection, ShortcutSlot, type ShortcutKey } from "../components/
 
 interface SlotContainerProps {
   label: string;
+  description?: string;
   shortcutKey: ShortcutKey;
   currentAccelerator: string;
   defaultAccelerator: string;
@@ -50,6 +51,7 @@ function ShortcutPresetRow({
 
 function ShortcutSlotContainer({
   label,
+  description,
   shortcutKey,
   currentAccelerator,
   defaultAccelerator,
@@ -82,6 +84,7 @@ function ShortcutSlotContainer({
     <div>
       <ShortcutSlot
         label={label}
+        description={description}
         displayKeys={recording ? currentKeys : acceleratorToDisplay(currentAccelerator)}
         recording={recording}
         isDefault={currentAccelerator === defaultAccelerator}
@@ -146,6 +149,14 @@ export function ShortcutsContainer(): React.ReactElement | null {
         shortcutKey="viewLastDiff"
         currentAccelerator={shortcuts.viewLastDiff}
         defaultAccelerator={DEFAULT_SHORTCUTS.viewLastDiff}
+        onUpdate={handleUpdate}
+      />
+      <ShortcutSlotContainer
+        label={m.settings_shortcuts_label_action_mode()}
+        description={m.settings_shortcuts_action_mode_description()}
+        shortcutKey="actionMode"
+        currentAccelerator={shortcuts.actionMode}
+        defaultAccelerator={DEFAULT_SHORTCUTS.actionMode}
         onUpdate={handleUpdate}
       />
     </ShortcutsSection>

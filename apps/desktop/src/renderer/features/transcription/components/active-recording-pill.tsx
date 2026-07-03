@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { m } from "~/paraglide/messages";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import { cn } from "@/lib/utils";
@@ -8,11 +9,40 @@ import { cn } from "@/lib/utils";
 const MAX_DURATION_MS = 5 * 60 * 1000;
 const COUNTDOWN_START_MS = MAX_DURATION_MS - 10_000;
 
+const recordingPillVariants = cva(
+  "origin-bottom flex h-8 w-[116px] items-center gap-1 rounded-full border bg-card/95 px-1 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md",
+  {
+    variants: {
+      variant: {
+        default: "border-border/65",
+        action: "border-amber-400/90 ring-1 ring-amber-400/45",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  }
+);
+
+const processingPillVariants = cva(
+  "origin-bottom flex h-8 w-14 items-center justify-center rounded-full border bg-card/95 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md",
+  {
+    variants: {
+      variant: {
+        default: "border-border/65",
+        action: "border-amber-400/90 ring-1 ring-amber-400/45",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  }
+);
+
+export type PillVariant = VariantProps<typeof recordingPillVariants>["variant"];
+
 interface ActiveRecordingPillProps {
   display?: boolean;
   isSpeaking: boolean;
   volumeLevel: number;
   waveformHistory: number[];
+  variant?: PillVariant;
   onCancel: () => void;
   onStop: () => void;
 }
@@ -57,6 +87,7 @@ export function ActiveRecordingPill({
   isSpeaking,
   volumeLevel,
   waveformHistory,
+  variant,
   onCancel,
   onStop,
 }: ActiveRecordingPillProps): React.ReactElement | null {
@@ -81,7 +112,7 @@ export function ActiveRecordingPill({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, y: 5 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className="origin-bottom flex h-8 w-[116px] items-center gap-1 rounded-full border border-border/65 bg-card/95 px-1 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md"
+      className={recordingPillVariants({ variant })}
     >
       <PillIconButton label={m.pill_recording_cancel_aria_label()} tone="cancel" onClick={onCancel}>
         <X className="size-3" strokeWidth={2.3} aria-hidden />
@@ -121,8 +152,12 @@ export function ActiveRecordingPill({
 
 export function ProcessingPill({
   display = true,
+  variant,
+  label,
 }: {
   display?: boolean;
+  variant?: PillVariant;
+  label?: string;
 }): React.ReactElement | null {
   if (!display) return null;
 
@@ -132,10 +167,10 @@ export function ProcessingPill({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, y: 5 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className="origin-bottom flex h-8 w-14 items-center justify-center rounded-full border border-border/65 bg-card/95 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md"
+      className={processingPillVariants({ variant })}
       role="status"
       aria-live="polite"
-      aria-label={m.pill_transcribing_label()}
+      aria-label={label ?? m.pill_transcribing_label()}
     >
       <motion.span
         className="flex items-center gap-1"

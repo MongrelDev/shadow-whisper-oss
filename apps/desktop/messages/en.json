@@ -825,5 +825,21 @@
   "diff_panel_thanks": "Thanks for feedback",
   "diff_panel_pasted": "Pasted",
   "diff_panel_close": "Close",
-  "shortcut_view_last_diff": "View last diff"
+  "shortcut_view_last_diff": "View last diff",
+  "action_mode_failed_notice": "Action Mode failed. Nothing was inserted.",
+  "settings_shortcuts_label_action_mode": "Action Mode",
+  "pill_action_mode_failed_reason": "Action Mode failed. Try again.",
+  "pill_action_mode_limit_reached": "Weekly word limit reached.",
+  "pill_action_mode_rate_limited": "Too many actions. Wait a moment and try again.",
+  "onboarding_welcome_item_action_mode": "Meet Action Mode",
+  "onboarding_action_mode_eyebrow": "Action Mode",
+  "onboarding_action_mode_title": "Tell the AI what to do with any text",
+  "onboarding_action_mode_body": "Select text in any app, press the Action Mode shortcut, and speak an instruction: \"translate this\", \"answer this question\", \"rewrite it like a caveman\". The result replaces your selection.",
+  "onboarding_action_mode_step_select": "Select text in any app (optional)",
+  "onboarding_action_mode_step_shortcut": "Press the Action Mode shortcut",
+  "onboarding_action_mode_step_speak": "Speak your instruction",
+  "onboarding_action_mode_shortcut_label": "Your shortcut:",
+  "onboarding_action_mode_hint": "No text selected? Your instruction becomes a prompt and the result is typed at your cursor.",
+  "settings_shortcuts_action_mode_description": "Select text anywhere, press the shortcut, and speak an instruction like \"translate this\". The result replaces your selection; with nothing selected, it is typed at your cursor.",
+  "pill_action_mode_processing_label": "Applying your instruction"
 }

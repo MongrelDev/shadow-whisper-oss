@@ -55,6 +55,9 @@ export function usePillController() {
   sessionRef.current = session;
 
   const handleCancel = useCallback(() => {
+    // The cancel shortcut is shared with Action Mode; only react when this
+    // (dictation) session is the one in flight.
+    if (sessionRef.current.phase === "idle") return;
     playUiSound("cancel");
     void sessionRef.current.cancel();
     goMinimized();

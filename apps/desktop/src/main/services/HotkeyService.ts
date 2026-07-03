@@ -8,22 +8,38 @@ import {
 } from "../windows/pill";
 import { getConfig, getShortcuts, setShortcut, setSkillShortcuts } from "./ConfigStore";
 import { getLastTranscriptText } from "./last-transcript-store";
-import { insertTextAtCursor, checkAccessibility } from "./KeyboardService";
+import {
+  insertTextAtCursor,
+  checkAccessibility,
+  getSelectedText,
+  getFocusedAppContext,
+} from "./KeyboardService";
 import { pasteViaClipboard } from "./clipboard-paste";
 import { areGlobalShortcutsBlocked, getInteractionMode } from "./InteractionModeService";
 import { applySkillToSelection } from "../skills/apply-shortcut";
 import { m } from "../../renderer/paraglide/messages";
 import { beginRecordingContext } from "./recording-context";
+import { beginActionModeContext } from "./action-mode-context";
 
 // Track recording state for toggle behavior
 let isRecording = false;
+let isActionModeRecording = false;
 
 let cancelShortcutAccelerator: string | null = null;
 
 let onRecordingStart: (() => void) | null = null;
+let onActionModeStart: (() => void) | null = null;
 
 export function setRecordingCallbacks(start: () => void): void {
   onRecordingStart = start;
+}
+
+export function setActionModeCallbacks(start: () => void): void {
+  onActionModeStart = start;
+}
+
+export function setIsActionModeRecording(recording: boolean): void {
+  isActionModeRecording = recording;
 }
 
 /**
@@ -46,6 +62,7 @@ function shouldIgnoreShortcut(): boolean {
 
 function toggleRecording(): void {
   if (shouldIgnoreShortcut()) return;
+  if (isActionModeRecording) return;
 
   if (!isRecording) {
     // RESEARCH Pitfall 2: must capture frontmost PID synchronously, BEFORE the
@@ -58,6 +75,40 @@ function toggleRecording(): void {
   } else {
     broadcastRecordingStop();
     // Note: isRecording will be set to false by onRecordingStop callback
+  }
+}
+
+function shouldIgnoreActionModeShortcut(): boolean {
+  if (areGlobalShortcutsBlocked()) return true;
+  const mode = getInteractionMode();
+  if (mode === "processing-transcription") return true;
+  if (mode === "recording-audio" && !isActionModeRecording) return true;
+  return false;
+}
+
+// Same pitfall as dictation: frontmost pid, window handle, and the text
+// selection must all be captured synchronously before the pill paints.
+function beginActionModeCapture(): void {
+  const selectedText = getSelectedText();
+  beginActionModeContext({
+    targetPid: nativeInput.getFrontmostPid(),
+    targetWindowHandle: nativeInput.getForegroundWindowHandle(),
+    selectedText: selectedText && selectedText.trim().length > 0 ? selectedText : null,
+    bundleId: getFocusedAppContext()?.bundleId ?? null,
+  });
+}
+
+function toggleActionMode(): void {
+  if (shouldIgnoreActionModeShortcut()) return;
+  if (isRecording) return;
+
+  if (!isActionModeRecording) {
+    beginActionModeCapture();
+    isActionModeRecording = true;
+    onActionModeStart?.();
+  } else {
+    broadcastRecordingStop();
+    // Note: isActionModeRecording is cleared by the action-mode IPC lifecycle.
   }
 }
 
@@ -120,11 +171,12 @@ function registerShortcut(accelerator: string, callback: () => void): boolean {
   return success;
 }
 
-type ShortcutKey = "transcription" | "pasteLastTranscript" | "viewLastDiff";
+type ShortcutKey = "transcription" | "pasteLastTranscript" | "viewLastDiff" | "actionMode";
 
 function getCallbackForKey(key: ShortcutKey): () => void {
   if (key === "transcription") return toggleRecording;
   if (key === "viewLastDiff") return triggerViewLastDiff;
+  if (key === "actionMode") return toggleActionMode;
   return () => void handlePasteLastTranscript();
 }
 
@@ -232,6 +284,7 @@ export function setupGlobalShortcuts(): void {
   registerShortcut(shortcuts.transcription, toggleRecording);
   registerShortcut(shortcuts.pasteLastTranscript, () => void handlePasteLastTranscript());
   registerShortcut(shortcuts.viewLastDiff, triggerViewLastDiff);
+  registerShortcut(shortcuts.actionMode, toggleActionMode);
   setupSkillShortcuts();
 }
 

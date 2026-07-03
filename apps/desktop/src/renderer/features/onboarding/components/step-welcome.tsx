@@ -5,7 +5,8 @@ export function StepWelcome(): React.ReactElement {
     { index: "01", text: m.onboarding_welcome_item_permissions() },
     { index: "02", text: m.onboarding_welcome_item_shortcut() },
     { index: "03", text: m.onboarding_welcome_item_skills() },
-    { index: "04", text: m.onboarding_welcome_item_plan(), dim: true },
+    { index: "04", text: m.onboarding_welcome_item_action_mode() },
+    { index: "05", text: m.onboarding_welcome_item_plan(), dim: true },
   ];
 
   return (

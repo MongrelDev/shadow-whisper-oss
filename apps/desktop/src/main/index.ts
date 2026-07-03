@@ -26,12 +26,18 @@ protocol.registerSchemesAsPrivileged([
 
 import { createMainWindow } from "./windows/main";
 import { showMainWindow } from "./windows/main";
-import { createPillWindow, showPillWindow, sendPillRecordingStart } from "./windows/pill";
+import {
+  createPillWindow,
+  showPillWindow,
+  sendPillRecordingStart,
+  sendPillActionModeStart,
+} from "./windows/pill";
 import { setupTray } from "./services/TrayService";
 import {
   setupGlobalShortcuts,
   unregisterGlobalShortcuts,
   setRecordingCallbacks,
+  setActionModeCallbacks,
   registerCancelShortcut,
 } from "./services/HotkeyService";
 import { setupIpcHandlers } from "./ipc/handlers";
@@ -133,6 +139,12 @@ initPurchaseDeepLink();
     setRecordingCallbacks(() => {
       showPillWindow();
       sendPillRecordingStart();
+      registerCancelShortcut();
+    });
+
+    setActionModeCallbacks(() => {
+      showPillWindow();
+      sendPillActionModeStart();
       registerCancelShortcut();
     });
 

@@ -3,6 +3,7 @@ export const ONBOARDING_STEPS = [
   "permissions",
   "shortcut",
   "skills",
+  "action-mode",
   "plan",
   "done",
 ] as const;
@@ -13,7 +14,7 @@ export function isOnboardingStep(value: unknown): value is OnboardingStepId {
   return typeof value === "string" && (ONBOARDING_STEPS as readonly string[]).includes(value);
 }
 
-export const ONBOARDING_TOTAL_VISIBLE = 6;
+export const ONBOARDING_TOTAL_VISIBLE = 7;
 
 export interface ShortcutPreset {
   id: string;

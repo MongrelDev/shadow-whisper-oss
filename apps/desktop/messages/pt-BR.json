@@ -825,5 +825,21 @@
   "diff_panel_thanks": "Obrigado pelo feedback",
   "diff_panel_pasted": "Colado",
   "diff_panel_close": "Fechar",
-  "shortcut_view_last_diff": "Ver diferença da última transcrição"
+  "shortcut_view_last_diff": "Ver diferença da última transcrição",
+  "action_mode_failed_notice": "O Action Mode falhou. Nada foi inserido.",
+  "settings_shortcuts_label_action_mode": "Action Mode",
+  "pill_action_mode_failed_reason": "O Action Mode falhou. Tente novamente.",
+  "pill_action_mode_limit_reached": "Limite semanal de palavras atingido.",
+  "pill_action_mode_rate_limited": "Muitas ações em sequência. Aguarde um instante e tente de novo.",
+  "onboarding_welcome_item_action_mode": "Conheça o Action Mode",
+  "onboarding_action_mode_eyebrow": "Action Mode",
+  "onboarding_action_mode_title": "Diga à IA o que fazer com qualquer texto",
+  "onboarding_action_mode_body": "Selecione um texto em qualquer app, pressione o atalho do Action Mode e fale uma instrução: \"traduza isso\", \"responda essa pergunta\", \"reescreva como homem das cavernas\". O resultado substitui sua seleção.",
+  "onboarding_action_mode_step_select": "Selecione um texto em qualquer app (opcional)",
+  "onboarding_action_mode_step_shortcut": "Pressione o atalho do Action Mode",
+  "onboarding_action_mode_step_speak": "Fale sua instrução",
+  "onboarding_action_mode_shortcut_label": "Seu atalho:",
+  "onboarding_action_mode_hint": "Sem texto selecionado? Sua instrução vira um prompt e o resultado é digitado onde estiver o cursor.",
+  "settings_shortcuts_action_mode_description": "Selecione um texto em qualquer lugar, pressione o atalho e fale uma instrução como \"traduza isso\". O resultado substitui sua seleção; sem nada selecionado, ele é digitado no cursor.",
+  "pill_action_mode_processing_label": "Aplicando sua instrução"
 }
