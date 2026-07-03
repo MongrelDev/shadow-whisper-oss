@@ -44,6 +44,7 @@ export function PublicShell({
           <header className="flex items-center justify-between gap-6">
             <Link
               href={localizeHref("/", { locale: currentLocale })}
+              prefetch={false}
               className="flex items-center gap-3"
             >
               <span className="flex size-9 items-center justify-center rounded-md bg-background/75">

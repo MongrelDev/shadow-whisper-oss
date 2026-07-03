@@ -1,0 +1,3 @@
+export const ACTION_MODE_MAX_BYTES = 10 * 1024 * 1024;
+export const ACTION_MODE_DEFAULT_LOCALE = "auto";
+export const ACTION_MODE_MAX_SELECTED_TEXT_LENGTH = 50_000;

@@ -94,6 +94,7 @@ export interface AppConfigData {
     pasteLastTranscript: string;
     cancelRecording: string;
     viewLastDiff: string;
+    actionMode: string;
   };
   preferences: {
     theme: AppTheme;
@@ -145,6 +146,7 @@ export interface ShortcutConfigData {
   cancelRecording: string;
   teach: string;
   viewLastDiff: string;
+  actionMode: string;
 }
 
 // ─── Tooltip Types ───────────────────────────────────────────────────
@@ -279,6 +281,43 @@ export interface SessionAPI {
   warmup: () => Promise<WarmupIpcResult>;
   transcribe: (input: TranscribeSyncIpcInput) => Promise<TranscribeSyncIpcResult>;
   onRewards: (callback: (payload: SessionRewardsPushPayload) => void) => () => void;
+}
+
+// ─── Action Mode ──────────────────────────────────────────────────────
+
+export type ActionModeFailureReason =
+  | "quota_exceeded"
+  | "unauthenticated"
+  | "network"
+  | "internal"
+  | "payload_too_large"
+  | "execution_failed"
+  | "rate_limited";
+
+export interface ActionModeExecuteIpcInput {
+  audioBuffer: ArrayBuffer;
+  contentType: string;
+  // `locale` is the STT language hint; `language` is the UI locale used for analytics.
+  locale?: string;
+  timezone: string;
+  language: string | null;
+}
+
+export type ActionModeExecuteIpcResult =
+  | {
+      ok: true;
+      outputText: string;
+      instructionText: string;
+      inserted: boolean;
+      notice?: string;
+    }
+  | { ok: false; reason: ActionModeFailureReason; message?: string };
+
+export interface ActionModeAPI {
+  execute: (input: ActionModeExecuteIpcInput) => Promise<ActionModeExecuteIpcResult>;
+  notifyStarted: () => void;
+  cancel: () => void;
+  onStart: (callback: () => void) => () => void;
 }
 
 export interface SuggestionsAPI {
@@ -441,6 +480,7 @@ export interface ElectronAPI {
   skills: SkillsAPI;
   skillBuilder: SkillBuilderAPI;
   session: SessionAPI;
+  actionMode: ActionModeAPI;
   suggestions: SuggestionsAPI;
   settings: SettingsAPI;
   app: AppAPI;

@@ -6,10 +6,12 @@ export type ShortcutKey =
   | "transcription"
   | "pasteLastTranscript"
   | "cancelRecording"
-  | "viewLastDiff";
+  | "viewLastDiff"
+  | "actionMode";
 
 interface ShortcutSlotProps {
   label: string;
+  description?: string;
   displayKeys: string[];
   recording: boolean;
   disabled?: boolean;
@@ -24,6 +26,7 @@ interface ShortcutSlotProps {
 
 export function ShortcutSlot({
   label,
+  description,
   displayKeys,
   recording,
   disabled,
@@ -57,13 +60,32 @@ export function ShortcutSlot({
           <RestoreButton onClick={onRestore} disabled={disabled || isDefault || recording} />
         </div>
       </div>
+      <SlotFootnotes description={description} conflict={conflict} error={error} />
+    </div>
+  );
+}
+
+function SlotFootnotes({
+  description,
+  conflict,
+  error,
+}: {
+  description?: string;
+  conflict: string | null;
+  error: string | null;
+}): React.ReactElement {
+  return (
+    <>
+      {description && (
+        <p className="text-sm text-muted-foreground mt-1 max-w-[58ch]">{description}</p>
+      )}
       {conflict && (
         <p className="text-sm text-amber-500 mt-1.5">
           {m.settings_shortcuts_conflict_prefix()} {conflict}
         </p>
       )}
       {error && <p className="text-sm text-destructive mt-1.5">{error}</p>}
-    </div>
+    </>
   );
 }
 

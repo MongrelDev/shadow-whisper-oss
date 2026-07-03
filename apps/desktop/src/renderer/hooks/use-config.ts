@@ -7,6 +7,7 @@ export const DEFAULT_CONFIG: AppConfigData = {
     pasteLastTranscript: "CommandOrControl+Alt+V",
     cancelRecording: "Escape",
     viewLastDiff: "CommandOrControl+Alt+O",
+    actionMode: "CommandOrControl+Alt+A",
   },
   preferences: {
     theme: "light",

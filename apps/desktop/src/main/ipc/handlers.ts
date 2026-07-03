@@ -11,6 +11,7 @@ import { setupDictionaryHandlers } from "./domains/dictionary.handlers";
 import { setupSkillsHandlers } from "./domains/skills.handlers";
 import { setupSkillBuilderHandlers } from "./domains/skill-builder.handlers";
 import { setupSessionHandlers } from "./domains/session.handlers";
+import { setupActionModeHandlers } from "./domains/action-mode.handlers";
 import { setupUserHandlers } from "./domains/user.handlers";
 import { setupAffiliateHandlers } from "./domains/affiliate.handlers";
 import { setupUsageHandlers } from "./domains/usage.handlers";
@@ -33,6 +34,7 @@ export function setupIpcHandlers(): void {
   setupSkillsHandlers();
   setupSkillBuilderHandlers();
   setupSessionHandlers();
+  setupActionModeHandlers();
   setupUserHandlers();
   setupAffiliateHandlers();
   setupUsageHandlers();

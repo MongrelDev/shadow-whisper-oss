@@ -38,6 +38,7 @@ export function LocaleSwitcher({
           )}
           <Link
             href={localizeHref(currentPath, { locale })}
+            prefetch={false}
             hrefLang={locale}
             aria-current={locale === current ? "page" : undefined}
             className={cn(

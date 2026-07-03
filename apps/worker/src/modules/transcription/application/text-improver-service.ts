@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { EMPTY_MEMORY_CONTEXT } from "../../whisper-memory/domain/memory-context";
 import { MemoryProvider } from "../../whisper-memory/application/ports/memory-provider";
 import { DictionaryRepository } from "../../dictionary/application/ports/dictionary-repository";
+import { expandSnippets } from "../../dictionary/domain/expand-snippets";
 import {
   SkillRepository,
   type SkillRepositoryService,
@@ -117,7 +118,10 @@ export const TextImproverServiceLive = Layer.effect(
           routing: contribution.routing,
         });
 
-        return sanitizeModelOutput(params.rawText, text);
+        // The prompt asks the model to apply snippets, but that is best-effort:
+        // small models skip or mangle them. Expanding after the guardrail makes
+        // triggers deterministic, including on the raw-text fallback path.
+        return expandSnippets(sanitizeModelOutput(params.rawText, text), dictionary.snippets);
       }),
     };
   })

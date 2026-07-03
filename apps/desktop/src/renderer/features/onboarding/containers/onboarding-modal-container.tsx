@@ -7,6 +7,7 @@ import { StepWelcome } from "../components/step-welcome";
 import { StepPermissions } from "../components/step-permissions";
 import { StepShortcut } from "../components/step-shortcut";
 import { StepSkills } from "../components/step-skills";
+import { StepActionMode } from "../components/step-action-mode";
 import { StepDone } from "../components/step-done";
 import { StepPlanContainer } from "./step-plan-container";
 import { useOnboardingModal } from "../hooks/use-onboarding-modal";
@@ -101,6 +102,7 @@ function renderOnboardingStep({
   updateConfig,
   selectedDeviceId,
   shortcutAccelerator,
+  actionModeAccelerator,
   persistShortcut,
   onPlanNext,
 }: {
@@ -113,6 +115,7 @@ function renderOnboardingStep({
   updateConfig: ReturnType<typeof useConfig>["updateConfig"];
   selectedDeviceId: string | undefined;
   shortcutAccelerator: string;
+  actionModeAccelerator: string;
   persistShortcut: (accelerator: string) => void;
   onPlanNext: () => void;
 }): { content: React.ReactNode; footer: React.ReactNode } {
@@ -162,6 +165,17 @@ function renderOnboardingStep({
         />
       ),
     }),
+    "action-mode": () => ({
+      content: <StepActionMode accelerator={actionModeAccelerator} />,
+      footer: (
+        <OnboardingFooter
+          onBack={onboarding.goBack}
+          onNext={onboarding.goNext}
+          showBack={canGoBack}
+          nextLabel={m.onboarding_modal_next_continue()}
+        />
+      ),
+    }),
     plan: () => ({
       content: <StepPlanContainer onNext={onPlanNext} />,
       footer: (
@@ -195,6 +209,7 @@ export function OnboardingModalContainer(): React.ReactElement | null {
 
   const persistShortcut = buildShortcutPersistor();
   const shortcutAccelerator = config.shortcuts.transcription;
+  const actionModeAccelerator = config.shortcuts.actionMode;
   const selectedDeviceId = resolveSelectedDeviceId(config);
 
   const handleSkipAll = () => {
@@ -214,6 +229,7 @@ export function OnboardingModalContainer(): React.ReactElement | null {
     updateConfig,
     selectedDeviceId,
     shortcutAccelerator,
+    actionModeAccelerator,
     persistShortcut,
     onPlanNext: handlePlanNext,
   });

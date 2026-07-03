@@ -2,6 +2,7 @@ import { Duration, Effect } from "effect";
 import type { SurfaceContext } from "@whisper/api";
 import { countWords } from "../../lib/count-words";
 import { DictionaryRepository } from "../../modules/dictionary/application/ports/dictionary-repository";
+import { collectDictionaryHints } from "../../modules/dictionary/domain/dictionary-hints";
 import {
   SpeechToText,
   type SpeechToTextRequest,
@@ -11,6 +12,7 @@ import {
   type TextImproverParams,
 } from "../../modules/transcription/application/ports/text-improver";
 import type { UsageEntry } from "../../modules/usage/application/ports/usage-tracker";
+import { collapseRepeatedRuns } from "../../modules/transcription/domain/collapse-repetition";
 import { languageForUsageStat } from "../../modules/usage/domain/usage-analytics";
 import type { MetaContext } from "../../modules/whisper-session/domain/meta-context";
 import { TranscriptionFailedError } from "../../modules/whisper-session/errors";
@@ -89,7 +91,7 @@ export const runSessionPipeline = Effect.fnUntraced(function* (input: RunSession
   const dictionaryHints =
     input.prefetchedDictionaryHints ??
     (yield* dictionaryRepository.getDictionary(input.userId).pipe(
-      Effect.map((d) => d.words.map((w) => w.word)),
+      Effect.map(collectDictionaryHints),
       Effect.catch(() => Effect.succeed([] as string[])),
       Effect.withSpan("do.dictionary-lookup")
     ));
@@ -134,8 +136,12 @@ export const runSessionPipeline = Effect.fnUntraced(function* (input: RunSession
     detectedLanguage: sttResult.detectedLanguage ?? null,
   });
 
+  // Strip any Whisper loop hallucination before the transcript reaches the cleanup
+  // LLM or the user. Applies across every STT engine, not just ai-whisper's guard.
+  const rawText = collapseRepeatedRuns(sttResult.text);
+
   const [llmWallDuration, improvedText] = yield* textImprover
-    .improve(buildImproveParams(input, sttResult.text, sttResult.detectedLanguage ?? null))
+    .improve(buildImproveParams(input, rawText, sttResult.detectedLanguage ?? null))
     .pipe(
       Effect.mapError((e) => new TranscriptionFailedError({ message: e.message })),
       Effect.withSpan("do.llm-improve", {
@@ -150,7 +156,7 @@ export const runSessionPipeline = Effect.fnUntraced(function* (input: RunSession
 
   yield* obs.setWideEvent({ llmWallMs: Duration.toMillis(llmWallDuration) });
 
-  const wordCount = countWords(sttResult.text);
+  const wordCount = countWords(rawText);
 
   const usageDraft: UsageEntry = {
     id: transcriptionId,
@@ -171,7 +177,7 @@ export const runSessionPipeline = Effect.fnUntraced(function* (input: RunSession
   yield* obs.setWideEvent({ agentRunSessionCompleted: true });
 
   return {
-    rawText: sttResult.text,
+    rawText,
     improvedText,
     sttEngine: sttResult.engine,
     durationMs: sttResult.durationMs,
