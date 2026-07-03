@@ -2,10 +2,14 @@ import type { Snippet } from "./dictionary";
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Triggers only match as whole words/phrases: bounded by start/end of text,
-// whitespace, punctuation, or symbols — never inside another word.
-const BOUNDARY_BEFORE = String.raw`(?<=^|[\s\p{P}\p{S}])`;
-const BOUNDARY_AFTER = String.raw`(?=$|[\s\p{P}\p{S}])`;
+// Triggers only match as whole words/phrases: the characters immediately around
+// a match must not be letters, digits, or intra-word connectors. Hyphen and
+// apostrophe are connectors, not boundaries — otherwise a trigger "ask" would
+// expand inside "re-ask" and "don't" would break at "don". Start/end of text
+// count as boundaries because a negative lookaround succeeds with nothing there.
+const INTRA_WORD = String.raw`\p{L}\p{N}_'’\-`;
+const BOUNDARY_BEFORE = String.raw`(?<![${INTRA_WORD}])`;
+const BOUNDARY_AFTER = String.raw`(?![${INTRA_WORD}])`;
 
 const normalizeTrigger = (trigger: string) => trigger.trim().replace(/\s+/g, " ").toLowerCase();
 

@@ -33,6 +33,18 @@ describe("expandSnippets", () => {
     expect(result).toBe("send it to HQ, please (HQ).");
   });
 
+  it("does not expand a trigger inside a hyphenated or possessive word", () => {
+    expect(expandSnippets("let me re-ask that", [snippet("ask", "EXPANDED")])).toBe(
+      "let me re-ask that"
+    );
+    expect(expandSnippets("an ai-powered tool", [snippet("ai", "artificial intelligence")])).toBe(
+      "an ai-powered tool"
+    );
+    expect(expandSnippets("that is don't territory", [snippet("don", "EXPANDED")])).toBe(
+      "that is don't territory"
+    );
+  });
+
   it("prefers the longest trigger at the same position", () => {
     const result = expandSnippets("the investor ask is high", [
       snippet("ask", "SHORT"),
