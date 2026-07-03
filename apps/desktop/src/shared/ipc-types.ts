@@ -94,6 +94,7 @@ export interface AppConfigData {
     pasteLastTranscript: string;
     cancelRecording: string;
     viewLastDiff: string;
+    actionMode: string;
   };
   preferences: {
     theme: AppTheme;
@@ -145,6 +146,7 @@ export interface ShortcutConfigData {
   cancelRecording: string;
   teach: string;
   viewLastDiff: string;
+  actionMode: string;
 }
 
 // ─── Tooltip Types ───────────────────────────────────────────────────
