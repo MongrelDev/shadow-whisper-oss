@@ -17,9 +17,11 @@ import {
   type SessionEntry,
   type WhisperSessionState,
 } from "./state";
-import { makeWhisperAgentLayer } from "./infra/live";
+import { makeActionModeAgentLayer, makeWhisperAgentLayer } from "./infra/live";
 import { makeAgentObservabilityLayer } from "./infra/observability";
 import { runSessionPipeline, type RunSessionResult } from "./run-session-pipeline";
+import { runActionPipeline, type RunActionPipelineInput } from "./run-action-pipeline";
+import type { ActionResult } from "../../modules/action-mode/domain/action-result";
 import { OtlpTracingLive } from "../../observability/tracing";
 
 class SessionForbiddenError extends Data.TaggedError("SessionForbiddenError")<{
@@ -69,6 +71,22 @@ export interface GetRewardsInput {
   readonly userId: string;
   readonly sessionId: string;
 }
+
+export interface RunActionModeInput extends RunActionPipelineInput {
+  readonly traceContext?: {
+    readonly traceId: string;
+    readonly spanId: string;
+    readonly sampled: boolean;
+  };
+}
+
+class ActionPipelineError extends Data.TaggedError("ActionPipelineError")<{
+  readonly message: string;
+  readonly internal: {
+    readonly userId: string;
+    readonly cause: string;
+  };
+}> {}
 
 const mapUsageResultToRewards = (result: RecordUsageResult): RecordCompletionResult => ({
   unlockedAchievements: result.unlockedAchievements.map((a) => a.key),
@@ -242,6 +260,90 @@ export class WhisperAgent extends Agent<Env, WhisperSessionState> {
           },
         })
     );
+  }
+
+  // Action Mode: a single-call pipeline (no warmup, no session entry, no replay).
+  // The desktop makes exactly one attempt and surfaces failures without retrying,
+  // so usage cannot double-count. Quota was already checked by the Worker-side
+  // ActionModeService before this RPC, mirroring warmup's division of duties.
+  async runActionMode(input: RunActionModeInput): Promise<ActionResult> {
+    this.assertOwnership(input.userId);
+
+    const obsLayer = makeAgentObservabilityLayer(this.env, "agent.run_action_mode", {
+      userId: input.userId,
+    });
+
+    const { traceContext, ...pipelineInput } = input;
+
+    const pipeline = runActionPipeline(pipelineInput).pipe(
+      Effect.withSpan("whisper-agent.run-action-mode", {
+        attributes: {
+          "session.userId": input.userId,
+          "audio.bytes": input.audio.byteLength,
+          "action_mode.hasSelectedText": input.selectedText !== null,
+        },
+      })
+    );
+
+    let program = Effect.flatMap(Observability, (obs) => obs.ensureWideEventEmitted(pipeline)).pipe(
+      Effect.provide(
+        Layer.mergeAll(makeActionModeAgentLayer(this.env), obsLayer, OtlpTracingLive(this.env))
+      )
+    );
+
+    if (traceContext) {
+      const externalSpan: Tracer.ExternalSpan = {
+        _tag: "ExternalSpan",
+        spanId: traceContext.spanId,
+        traceId: traceContext.traceId,
+        sampled: traceContext.sampled,
+        annotations: Context.empty(),
+      };
+      program = program.pipe(Effect.provideService(Tracer.ParentSpan, externalSpan));
+    }
+
+    const exit = await Effect.runPromiseExit(program);
+
+    if (Exit.isSuccess(exit)) {
+      const { usageDraft, ...result } = exit.value;
+      this.recordActionUsage(input.userId, usageDraft);
+      return result;
+    }
+
+    const failure = Cause.findErrorOption(exit.cause);
+    throw Option.getOrElse(
+      failure,
+      () =>
+        new ActionPipelineError({
+          message: "agent_run_action_mode_failed",
+          internal: {
+            userId: input.userId,
+            cause: Cause.pretty(exit.cause),
+          },
+        })
+    );
+  }
+
+  // Usage recording runs off the hot path: the transformed text returns now and
+  // the ledger write happens under waitUntil. recordUsage is idempotent by id, and
+  // a failed write only loses one stat entry — never the user's result.
+  private recordActionUsage(userId: string, usageDraft: UsageEntry): void {
+    const program = Effect.gen(function* () {
+      const tracker = yield* UsageTracker;
+      return yield* tracker.record(usageDraft);
+    }).pipe(Effect.provide(UsageLive(this.env, userId)));
+
+    const evaluation = Effect.runPromiseExit(program).then((exit) => {
+      if (Exit.isFailure(exit)) {
+        Effect.runFork(
+          Effect.logError("whisper-agent.action-usage-recording failed", {
+            actionId: usageDraft.id,
+            cause: exit.cause,
+          })
+        );
+      }
+    });
+    this.ctx.waitUntil(evaluation);
   }
 
   private async completeSession(

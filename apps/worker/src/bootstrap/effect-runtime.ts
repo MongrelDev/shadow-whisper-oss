@@ -12,6 +12,7 @@ import { SkillsCatalogLive } from "../modules/skills-catalog/infra/live";
 import { TranscriptionLive } from "../modules/transcription/infra/live";
 import { WhisperMemoryLive } from "../modules/whisper-memory/infra/live";
 import { WhisperSessionLive } from "../modules/whisper-session/infra/live";
+import { ActionModeLive } from "../modules/action-mode/infra/live";
 import {
   NoopObservabilityLive,
   Observability,
@@ -43,6 +44,8 @@ export const makeAppLayer = (env: Env, options?: AppLayerOptions) => {
   const whisperSessionDeps = Layer.mergeAll(billingLayer, skillsCatalogLayer, skillsLayer);
   const whisperSessionLayer = WhisperSessionLive(env).pipe(Layer.provide(whisperSessionDeps));
 
+  const actionModeLayer = ActionModeLive(env).pipe(Layer.provide(billingLayer));
+
   return Layer.mergeAll(
     Layer.succeed(AppConfig, makeAppConfig(env)),
     Layer.succeed(RateLimiter, makeCloudflareRateLimiter(env)),
@@ -54,6 +57,7 @@ export const makeAppLayer = (env: Env, options?: AppLayerOptions) => {
     TranscriptionLive(env),
     WhisperMemoryLive(env),
     whisperSessionLayer,
+    actionModeLayer,
     billingLayer
   );
 };

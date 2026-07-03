@@ -18,6 +18,7 @@ import health from "./modules/health/handler";
 import skills from "./modules/skills-catalog/handler";
 import usageAnalyticsHandler from "./modules/usage/handler";
 import whisperSessionHandler from "./modules/whisper-session/handler";
+import actionModeHandler from "./modules/action-mode/handler";
 import { byEmail, byIp, rateLimit } from "./middleware/rate-limit";
 const app = new Hono<{ Bindings: Env }>();
 
@@ -60,6 +61,7 @@ const routes = app
   .route("/dictionary", dictionary)
   .route("/skills", skills)
   .route("/api/sessions", whisperSessionHandler)
+  .route("/api/action-mode", actionModeHandler)
   .route("/api/usage", usageAnalyticsHandler)
   .route("/teach", teach)
   .route("/api/feedback", cleanupFeedback)
