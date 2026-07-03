@@ -9,31 +9,28 @@ import { cn } from "@/lib/utils";
 const MAX_DURATION_MS = 5 * 60 * 1000;
 const COUNTDOWN_START_MS = MAX_DURATION_MS - 10_000;
 
-const recordingPillVariants = cva(
-  "origin-bottom flex h-8 w-[116px] items-center gap-1 rounded-full border bg-card/95 px-1 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md",
-  {
-    variants: {
-      variant: {
-        default: "border-border/65",
-        action: "border-amber-400/90 ring-1 ring-amber-400/45",
-      },
-    },
-    defaultVariants: { variant: "default" },
-  }
-);
+// Active pills (recording + processing) render as solid, firmly bordered
+// surfaces: while capturing, the pill is the focus and should read as opaque
+// chrome, not glass. The idle/minimized pill keeps its translucency. Action
+// Mode carries a thicker amber frame with a soft amber halo so it is
+// unmistakable against the neutral recording pill.
+const activePillBase =
+  "origin-bottom flex h-8 items-center rounded-full border-2 bg-card text-card-foreground shadow-[0_10px_26px_-16px_oklch(0_0_0/0.5),inset_0_1px_0_oklch(1_0_0/0.08)]";
 
-const processingPillVariants = cva(
-  "origin-bottom flex h-8 w-14 items-center justify-center rounded-full border bg-card/95 text-card-foreground shadow-[0_8px_22px_-16px_oklch(0_0_0/0.42),inset_0_1px_0_oklch(1_0_0/0.08)] supports-[backdrop-filter]:bg-card/85 supports-[backdrop-filter]:backdrop-blur-md",
-  {
-    variants: {
-      variant: {
-        default: "border-border/65",
-        action: "border-amber-400/90 ring-1 ring-amber-400/45",
-      },
-    },
-    defaultVariants: { variant: "default" },
-  }
-);
+const activePillVariants = {
+  default: "border-border",
+  action: "border-amber-400 ring-2 ring-amber-400/30",
+} as const;
+
+const recordingPillVariants = cva(`${activePillBase} w-[116px] gap-1 px-1`, {
+  variants: { variant: activePillVariants },
+  defaultVariants: { variant: "default" },
+});
+
+const processingPillVariants = cva(`${activePillBase} w-14 justify-center`, {
+  variants: { variant: activePillVariants },
+  defaultVariants: { variant: "default" },
+});
 
 export type PillVariant = VariantProps<typeof recordingPillVariants>["variant"];
 
@@ -50,13 +47,24 @@ interface ActiveRecordingPillProps {
 interface PillIconButtonProps {
   readonly label: string;
   readonly tone: "cancel" | "confirm";
+  readonly accent?: boolean;
   readonly onClick: () => void;
   readonly children: React.ReactNode;
 }
 
+// The confirm button carries the mode: neutral (foreground) while dictating,
+// amber in Action Mode so the primary affordance matches the amber frame.
+const confirmTone = {
+  default:
+    "bg-foreground text-background shadow-[0_1px_0_oklch(0_0_0/0.08)] hover:bg-primary hover:text-primary-foreground focus-visible:ring-primary/55",
+  action:
+    "bg-amber-400 text-amber-950 shadow-[0_1px_0_oklch(0_0_0/0.12)] hover:bg-amber-300 focus-visible:ring-amber-400/60",
+} as const;
+
 function PillIconButton({
   label,
   tone,
+  accent = false,
   onClick,
   children,
 }: PillIconButtonProps): React.ReactElement {
@@ -70,11 +78,11 @@ function PillIconButton({
       className={cn(
         "relative inline-flex size-6 shrink-0 items-center justify-center rounded-full",
         "transition-[background-color,color,box-shadow] duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "before:absolute before:-inset-1 before:content-['']",
         tone === "cancel"
-          ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-          : "bg-foreground text-background shadow-[0_1px_0_oklch(0_0_0/0.08)] hover:bg-primary hover:text-primary-foreground"
+          ? "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-primary/55"
+          : confirmTone[accent ? "action" : "default"]
       )}
     >
       {children}
@@ -143,7 +151,12 @@ export function ActiveRecordingPill({
         )}
       </div>
 
-      <PillIconButton label={m.pill_recording_finish_aria_label()} tone="confirm" onClick={onStop}>
+      <PillIconButton
+        label={m.pill_recording_finish_aria_label()}
+        tone="confirm"
+        accent={variant === "action"}
+        onClick={onStop}
+      >
         <Check className="size-3" strokeWidth={2.5} aria-hidden />
       </PillIconButton>
     </motion.div>
