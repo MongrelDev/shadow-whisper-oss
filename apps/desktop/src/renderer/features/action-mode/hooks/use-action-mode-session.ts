@@ -159,7 +159,14 @@ export function useActionModeSession(): UseActionModeSessionReturn {
   }, [interactionMode]);
 
   const start = useCallback(async () => {
-    if (phaseRef.current !== "idle") return;
+    // Main already set isActionModeRecording=true and fired onActionModeStart
+    // before we ran. If a prior session is still busy we cannot start, but we
+    // must still release main's lock — otherwise it stays stuck true and every
+    // future action-mode AND dictation shortcut is swallowed until restart.
+    if (phaseRef.current !== "idle") {
+      window.api.actionMode.cancel();
+      return;
+    }
 
     const micGranted = await requestMicrophoneAccess();
     if (!micGranted) {
