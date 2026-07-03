@@ -30,5 +30,22 @@ const SPACED_RUN = new RegExp(
 // or an email local part ("aaaaaaaa@example.com").
 const CONTIGUOUS_RUN = new RegExp(`(.{2,${MAX_UNIT_LENGTH}}?)\\1{${MIN_REPEATS - 1},}`, "gs");
 
+// The single-character carve-out above only protects units of length 1; a
+// multi-character unit that is really one repeated character ("--" in a rule,
+// "aa" in "aaaaaaaaaaaa") or carries no letters ("12" in a dictated number,
+// ".." in an ellipsis run) is legitimate content, not a decoding loop. Only
+// collapse a contiguous run whose unit has at least one letter and more than
+// one distinct character, so separators, numbers, and elongated words survive.
+const LETTER = /\p{L}/u;
+
+const isSingleCharUnit = (unit: string): boolean => {
+  const chars = [...unit];
+  return chars.every((char) => char === chars[0]);
+};
+
+const isHallucinatedUnit = (unit: string): boolean => LETTER.test(unit) && !isSingleCharUnit(unit);
+
 export const collapseRepeatedRuns = (text: string): string =>
-  text.replace(SPACED_RUN, "$1").replace(CONTIGUOUS_RUN, "$1");
+  text
+    .replace(SPACED_RUN, "$1")
+    .replace(CONTIGUOUS_RUN, (match, unit: string) => (isHallucinatedUnit(unit) ? unit : match));

@@ -52,4 +52,11 @@ describe("collapseRepeatedRuns", () => {
     expect(collapseRepeatedRuns("noooooo")).toBe("noooooo");
     expect(collapseRepeatedRuns("aaaaaaaa@example.com")).toBe("aaaaaaaa@example.com");
   });
+
+  it("preserves multi-character runs that carry no letters or are one repeated character", () => {
+    expect(collapseRepeatedRuns("------------")).toBe("------------");
+    expect(collapseRepeatedRuns("wait............")).toBe("wait............");
+    expect(collapseRepeatedRuns("code 121212121212")).toBe("code 121212121212");
+    expect(collapseRepeatedRuns("soooooooooooo good")).toBe("soooooooooooo good");
+  });
 });
