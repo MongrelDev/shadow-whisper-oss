@@ -10,6 +10,7 @@ import { ActionModeExecutionError } from "../../modules/action-mode/errors";
 import type { ActionResult } from "../../modules/action-mode/domain/action-result";
 import type { UsageEntry } from "../../modules/usage/application/ports/usage-tracker";
 import { languageForUsageStat } from "../../modules/usage/domain/usage-analytics";
+import { collapseRepeatedRuns } from "../../modules/transcription/domain/collapse-repetition";
 import { Observability } from "../../observability/observability";
 
 export interface RunActionPipelineInput {
@@ -78,7 +79,7 @@ export const runActionPipeline = Effect.fnUntraced(function* (input: RunActionPi
       Effect.timed
     );
 
-  const instructionText = sttResult.text.trim();
+  const instructionText = collapseRepeatedRuns(sttResult.text).trim();
   if (!instructionText) {
     return yield* new ActionModeExecutionError({ message: "empty_instruction" });
   }
@@ -109,8 +110,16 @@ export const runActionPipeline = Effect.fnUntraced(function* (input: RunActionPi
 
   yield* obs.setWideEvent({ llmWallMs: Duration.toMillis(llmWallDuration) });
 
+  // An empty transform result is surfaced to the client as a failure (nothing is
+  // inserted), so fail here too — otherwise usage is recorded for a run the user
+  // sees as failed, billing them for no output.
+  const outputText = outcome.text.trim();
+  if (!outputText) {
+    return yield* new ActionModeExecutionError({ message: "empty_output" });
+  }
+
   const instructionWordCount = countWords(instructionText);
-  const outputWordCount = countWords(outcome.text);
+  const outputWordCount = countWords(outputText);
 
   const usageDraft: UsageEntry = {
     id: actionId,
@@ -136,7 +145,7 @@ export const runActionPipeline = Effect.fnUntraced(function* (input: RunActionPi
 
   return {
     instructionText,
-    outputText: outcome.text,
+    outputText,
     instructionWordCount,
     outputWordCount,
     sttEngine: sttResult.engine,
