@@ -13,8 +13,9 @@
     }
   },
   "scripts": {
+    "install": "node scripts/build-native.mjs",
     "build": "node scripts/build-swift-macos.mjs && node -e \"process.platform==='linux'&&process.exit(0)\" || node-gyp rebuild && tsc",
-    "build:native": "node scripts/build-swift-macos.mjs && node-gyp rebuild",
+    "build:native": "node scripts/build-native.mjs",
     "build:native:arm64": "node scripts/build-swift-macos.mjs && node-gyp rebuild --arch=arm64",
     "build:native:x64": "node scripts/build-swift-macos.mjs && node-gyp rebuild --arch=x64",
     "build:ts": "tsc",
