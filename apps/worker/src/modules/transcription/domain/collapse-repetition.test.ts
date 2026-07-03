@@ -45,4 +45,11 @@ describe("collapseRepeatedRuns", () => {
     expect(collapseRepeatedRuns("")).toBe("");
     expect(collapseRepeatedRuns("hello")).toBe("hello");
   });
+
+  it("preserves legitimate contiguous single-character runs", () => {
+    expect(collapseRepeatedRuns("111111")).toBe("111111");
+    expect(collapseRepeatedRuns("my pin is 000000 ok")).toBe("my pin is 000000 ok");
+    expect(collapseRepeatedRuns("noooooo")).toBe("noooooo");
+    expect(collapseRepeatedRuns("aaaaaaaa@example.com")).toBe("aaaaaaaa@example.com");
+  });
 });

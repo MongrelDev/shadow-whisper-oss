@@ -25,7 +25,10 @@ const SPACED_RUN = new RegExp(
 );
 
 // Contiguous loops with no separator between copies (e.g. the CJK "谢谢观看谢谢观看…").
-const CONTIGUOUS_RUN = new RegExp(`(.{1,${MAX_UNIT_LENGTH}}?)\\1{${MIN_REPEATS - 1},}`, "gs");
+// The unit must be at least two characters: collapsing single-character runs would
+// corrupt legitimate dictation such as PINs ("111111"), elongated words ("noooooo"),
+// or an email local part ("aaaaaaaa@example.com").
+const CONTIGUOUS_RUN = new RegExp(`(.{2,${MAX_UNIT_LENGTH}}?)\\1{${MIN_REPEATS - 1},}`, "gs");
 
 export const collapseRepeatedRuns = (text: string): string =>
   text.replace(SPACED_RUN, "$1").replace(CONTIGUOUS_RUN, "$1");
