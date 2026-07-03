@@ -10,6 +10,7 @@ import { UsageTracker, type UsageEntry } from "../../modules/usage/application/p
 import { UsageLive } from "../../modules/usage/infra/live";
 import { DictionaryRepository } from "../../modules/dictionary/application/ports/dictionary-repository";
 import { DictionaryRepositoryLive } from "../../modules/dictionary/infra/live";
+import { collectDictionaryHints } from "../../modules/dictionary/domain/dictionary-hints";
 import type { RecordUsageResult } from "../../modules/usage/domain/usage-analytics";
 import {
   ABANDONED_SESSION_MAX_AGE_MS,
@@ -196,7 +197,7 @@ export class WhisperAgent extends Agent<Env, WhisperSessionState> {
       Effect.gen(function* () {
         const repo = yield* DictionaryRepository;
         const dictionary = yield* repo.getDictionary(userId);
-        return dictionary.words.map((w) => w.word);
+        return collectDictionaryHints(dictionary);
       }).pipe(Effect.provide(DictionaryRepositoryLive(this.env)))
     );
     return Exit.match(exit, {

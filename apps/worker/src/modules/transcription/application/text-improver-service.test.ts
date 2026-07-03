@@ -86,8 +86,14 @@ const makeMemoryProvider = (): MemoryProviderService => ({
   snapshot: () => Effect.succeed(EMPTY_MEMORY_CONTEXT),
 });
 
-const makeDictionaryRepo = (): DictionaryRepositoryService => ({
-  getDictionary: () => Effect.succeed({ words: [], snippets: [] }),
+const makeDictionaryRepo = (
+  snippets: Array<{ triggerPhrase: string; expandedText: string }> = []
+): DictionaryRepositoryService => ({
+  getDictionary: () =>
+    Effect.succeed({
+      words: [],
+      snippets: snippets.map((s, i) => ({ id: i + 1, createdAt: 0, ...s })),
+    }),
   addWord: () => Effect.die("not needed"),
   removeWord: () => Effect.void,
   addSnippet: () => Effect.die("not needed"),
@@ -113,6 +119,7 @@ function buildLayer(opts: {
   installed?: InstalledSkillSummary[];
   capture?: Capture;
   generatorResult?: Effect.Effect<string, TextImproverError>;
+  snippets?: Array<{ triggerPhrase: string; expandedText: string }>;
 }) {
   const flowSelector = ImprovementFlowSelectorLive.pipe(
     Layer.provide([
@@ -126,7 +133,7 @@ function buildLayer(opts: {
       Layer.succeed(SkillRepository, makeSkillRepo()),
       flowSelector,
       Layer.succeed(MemoryProvider, makeMemoryProvider()),
-      Layer.succeed(DictionaryRepository, makeDictionaryRepo()),
+      Layer.succeed(DictionaryRepository, makeDictionaryRepo(opts.snippets)),
       Layer.succeed(TextGenerator, makeGenerator(opts.capture ?? {}, opts.generatorResult)),
     ])
   );
@@ -315,6 +322,51 @@ describe("TextImproverService", () => {
         });
         const exit = yield* runImprove(voiceParams(), layer);
         expect(Exit.isFailure(exit)).toBe(true);
+      })
+    );
+  });
+
+  describe("snippet expansion", () => {
+    const snippets = [{ triggerPhrase: "addr", expandedText: "Rua das Flores 123" }];
+
+    it.effect("lists snippets in the user message so the model can apply them", () =>
+      Effect.gen(function* () {
+        const capture: Capture = {};
+        const layer = buildLayer({ capture, snippets });
+
+        yield* runImprove(voiceParams(), layer);
+
+        expect(capture.request?.prompt).toContain('"addr" → "Rua das Flores 123"');
+      })
+    );
+
+    it.effect("expands triggers the model left in its output", () =>
+      Effect.gen(function* () {
+        const layer = buildLayer({
+          snippets,
+          generatorResult: Effect.succeed("Send it to addr today."),
+        });
+        const exit = yield* runImprove(voiceParams(), layer);
+        expect(exit).toStrictEqual(Exit.succeed("Send it to Rua das Flores 123 today."));
+      })
+    );
+
+    it.effect("expands triggers on the raw-text fallback path", () =>
+      Effect.gen(function* () {
+        const layer = buildLayer({ snippets, generatorResult: Effect.succeed("") });
+        const exit = yield* runImprove(voiceParams({ rawText: "my addr please" }), layer);
+        expect(exit).toStrictEqual(Exit.succeed("my Rua das Flores 123 please"));
+      })
+    );
+
+    it.effect("leaves output untouched when the model already expanded the trigger", () =>
+      Effect.gen(function* () {
+        const layer = buildLayer({
+          snippets,
+          generatorResult: Effect.succeed("Send it to Rua das Flores 123 today."),
+        });
+        const exit = yield* runImprove(voiceParams(), layer);
+        expect(exit).toStrictEqual(Exit.succeed("Send it to Rua das Flores 123 today."));
       })
     );
   });
